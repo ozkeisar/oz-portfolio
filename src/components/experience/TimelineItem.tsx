@@ -53,13 +53,13 @@ export const TimelineItem = memo(function TimelineItem({
   // - border radius: 12 → 8
   // - border opacity: 0.3 → 0
   // - margin bottom: 8 → 4
-  // - height: expandedHeight → stackedHeight
+  // - height: auto (expanded) → stackedHeight (collapsed)
 
-  const currentHeight = interpolate(
-    effectiveCollapseProgress,
-    [0, 1],
-    [expandedHeight, stackedHeight]
-  );
+  // Use auto height when fully expanded, fixed height when collapsing/collapsed
+  const isFullyExpanded = effectiveCollapseProgress === 0;
+  const currentHeight = isFullyExpanded
+    ? 'auto'
+    : interpolate(effectiveCollapseProgress, [0, 1], [expandedHeight, stackedHeight]);
   const paddingVertical = interpolate(
     effectiveCollapseProgress,
     [0, 1],
@@ -111,7 +111,8 @@ export const TimelineItem = memo(function TimelineItem({
   return (
     <div
       style={{
-        height: currentHeight,
+        height: typeof currentHeight === 'number' ? currentHeight : undefined,
+        minHeight: isFullyExpanded ? undefined : stackedHeight,
         padding: `${paddingVertical}px ${paddingHorizontal}px`,
         backgroundColor: toRgbaString(colors.cardBackground, bgOpacity),
         borderRadius,
@@ -120,7 +121,7 @@ export const TimelineItem = memo(function TimelineItem({
             ? `1px solid ${toRgbaString(colors.cardBorder, borderOpacity)}`
             : 'none',
         marginBottom,
-        overflow: 'hidden',
+        overflow: isFullyExpanded ? 'visible' : 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}

@@ -227,9 +227,10 @@ export function ProfileImageTransition() {
     (isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20)) + 10;
   const expHeaderTotalHeight = expSectionNumberHeight + expHeaderMarginBottom;
 
-  // Timeline dots position (from TimelineRail)
+  // Timeline dots position (from TimelineRail - must match exactly!)
   const firstDotY = 20;
-  const lastDotY = railHeight - 20;
+  const lastDotY = railHeight - 60; // Leave room for extra dot below (matches TimelineRail)
+  const extraDotY = railHeight - 20; // Final dot position
 
   // Get scroll state for timeline position (same calculation as ExperienceSection)
   // When entering backward from Impact, use max scroll to position at bottom of timeline
@@ -241,11 +242,19 @@ export function ProfileImageTransition() {
       ? contentScrollOffset
       : 0;
   const expScrollState = getTimelineScrollState(experienceScrollOffset);
-  const progressY = interpolate(
+
+  // Calculate progressY matching TimelineRail exactly
+  const baseProgressY = interpolate(
     expScrollState.currentItemIndex + expScrollState.localProgress,
     [0, EXPERIENCE_ITEM_COUNT - 1],
     [firstDotY, lastDotY]
   );
+
+  // Extend to extra dot when at last item (matches TimelineRail)
+  const atLastItem = expScrollState.currentItemIndex === EXPERIENCE_ITEM_COUNT - 1;
+  const progressY = atLastItem
+    ? baseProgressY + expScrollState.localProgress * (extraDotY - lastDotY)
+    : baseProgressY;
 
   // Desktop experience position: center of rail, following progress
   // Add small offset to align with dot center (accounting for image size difference)

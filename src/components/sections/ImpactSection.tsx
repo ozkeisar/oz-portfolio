@@ -1,23 +1,32 @@
 import { FPS } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
-import { impactMetrics } from '../../data/impactData';
+import { featuredMetric, supportingMetrics } from '../../data/impactData';
 import { calculateExitAnimation } from '../../hooks/useExitAnimation';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
-import { MetricBox } from '../impact/MetricBox';
+import { FeaturedMetric } from '../impact/FeaturedMetric';
+import { MetricCard } from '../impact/MetricCard';
 
 // Entrance animation timing (must match ProfileImageTransition)
 const FORWARD_ENTRANCE_DELAY = 30; // Wait for Experience exit animation before appearing
+const REVERSE_DURATION = 30; // Frames for reverse animation
+
+// Animation sequence timing
+const FEATURED_START = 20; // Featured metric starts after header begins
+const SUPPORTING_ROW1_START = 50; // First row of supporting metrics
+const SUPPORTING_ROW2_START = 70; // Second row of supporting metrics
+const SUPPORTING_STAGGER = 10; // Stagger between metrics in same row
 
 /**
- * Impact Section with SVG line-drawing animations
+ * Impact Section - "Achievement Constellation" Design
  *
  * Features:
- * - Profile image transitions from Experience header
- * - SVG metric boxes with stroke-dasharray line-drawing animation
- * - Staggered sequence: image → boxes draw → numbers count up
- * - Animation-based (not scroll-driven) for dramatic entrance
+ * - Featured hero metric (1M+ Users) with prominent display
+ * - Asymmetric layout with supporting metrics in rows
+ * - Staggered cascade entrance animations
+ * - Number counting animations
+ * - Coordinates with ProfileImageTransition
  */
 export function ImpactSection() {
   const { sequenceFrame, direction, viewport } = useAnimationContext();
@@ -34,9 +43,6 @@ export function ImpactSection() {
 
   // Responsive breakpoints
   const isMobile = viewport.width < 768;
-
-  // Reverse animation timing - faster than entrance for snappy backward navigation
-  const REVERSE_DURATION = 30; // Frames for reverse animation
 
   // Section entrance animation - with delay when entering forward
   let entranceProgress: number;
@@ -63,9 +69,9 @@ export function ImpactSection() {
     });
   }
 
-  // Calculate effective frame for MetricBox animations
-  // This ensures boxes start animating at the right time
-  const effectiveMetricFrame = isEnteringForward
+  // Calculate effective frame for child component animations
+  // This ensures components start animating at the right time
+  const effectiveFrame = isEnteringForward
     ? Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY)
     : sequenceFrame;
 
@@ -107,33 +113,35 @@ export function ImpactSection() {
   const imageSize = isMobile ? mobileImageSize : desktopImageSize;
 
   // Calculate image spacer progress for header
-  // Image is present when entering forward, active, or exiting backward
   let imageSpacerProgress = 0;
   if (isEnteringForward) {
-    // Animate spacer in as entrance progresses
     imageSpacerProgress = entranceProgress;
   } else if (isEnteringBackward) {
-    // Entering backward: fully visible immediately
     imageSpacerProgress = 1;
   } else if (isReversing) {
-    // Reversing: animate spacer out as entranceProgress goes 1→0
     imageSpacerProgress = entranceProgress;
   } else {
-    // Active state: fully visible
     imageSpacerProgress = 1;
   }
   const imageSpacerWidth = imageSpacerProgress * (imageSize + 8);
 
   // Section number animation (slightly delayed from entrance)
-  const numberFrame = Math.max(0, effectiveMetricFrame - 5);
+  const numberFrame = Math.max(0, effectiveFrame - 5);
   const numberProgress = spring({
     frame: numberFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
 
-  // Always use 2 columns layout
-  const columns = 2;
+  // Split supporting metrics into rows for asymmetric layout
+  // Row 1: 3 metrics, Row 2: 2 metrics (desktop)
+  // Mobile: 2-column grid
+  const row1Metrics = supportingMetrics.slice(0, 3);
+  const row2Metrics = supportingMetrics.slice(3);
+
+  // Spacing
+  const sectionGap = responsiveSpacing(viewport.width, 16, 24);
+  const cardGap = responsiveSpacing(viewport.width, 10, 16);
 
   return (
     <div
@@ -159,7 +167,7 @@ export function ImpactSection() {
           maxWidth: contentMaxWidth,
           opacity: headerOpacity,
           transform: `translateY(${headerY}px)`,
-          marginBottom: responsiveSpacing(viewport.width, 32, 48),
+          marginBottom: sectionGap,
         }}
       >
         <div
@@ -213,27 +221,64 @@ export function ImpactSection() {
         </div>
       </div>
 
-      {/* Metrics Grid */}
+      {/* Metrics Content */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(${columns}, 1fr)`,
-          gap: responsiveSpacing(viewport.width, 12, 32),
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: sectionGap,
           maxWidth: contentMaxWidth,
           width: '100%',
-          justifyItems: 'center',
-          padding: responsiveSpacing(viewport.width, 8, 16),
         }}
       >
-        {impactMetrics.map((metric, index) => (
-          <MetricBox
-            key={metric.id}
-            metric={metric}
-            index={index}
-            sequenceFrame={effectiveMetricFrame}
-            viewportWidth={viewport.width}
-          />
-        ))}
+        {/* Featured Metric (Hero) */}
+        <FeaturedMetric
+          metric={featuredMetric}
+          entranceFrame={FEATURED_START}
+          sequenceFrame={effectiveFrame}
+          viewportWidth={viewport.width}
+        />
+
+        {/* Supporting Metrics - Row 1 (3 items) */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: cardGap,
+          }}
+        >
+          {row1Metrics.map((metric, index) => (
+            <MetricCard
+              key={metric.id}
+              metric={metric}
+              entranceFrame={SUPPORTING_ROW1_START + index * SUPPORTING_STAGGER}
+              sequenceFrame={effectiveFrame}
+              viewportWidth={viewport.width}
+            />
+          ))}
+        </div>
+
+        {/* Supporting Metrics - Row 2 (2 items) */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            justifyContent: 'center',
+            gap: cardGap,
+          }}
+        >
+          {row2Metrics.map((metric, index) => (
+            <MetricCard
+              key={metric.id}
+              metric={metric}
+              entranceFrame={SUPPORTING_ROW2_START + index * SUPPORTING_STAGGER}
+              sequenceFrame={effectiveFrame}
+              viewportWidth={viewport.width}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

@@ -31,19 +31,17 @@ is something not understanding to you? if so ask now.
 ---
 
 
-great work, now we continuing to the next section, the Experiance, read openspec/project.md 
-as we transformd the summery section to accept the image component, and redesigned it all to be more muture and info including, read the src/assets/Oz-Keisar-Professional-Summary.md and lets recreate the Experiance section. 
+great work, now we continuing to the next section, the Skills, read openspec/project.md 
+as we transformd the summery and experiance sections to accept the image component, and redesigned it all to be more muture and info including, read the src/assets/Oz-Keisar-Professional-Summary.md and lets recreate the Skills section. 
 
-for that section we will want to make something really beutifull. first as we move to that section fro mthe summery, the image take place in the header animating the entery to the page -> first item in the timeline showing in the same manner the text in the summery section is written, fast and smooth. here the animation ends and the power gose to the user scroll frame tracking. 
-as the user scroll more Down, the first item time line text - are being "backward written" and stop with the item titel (like the job name or something like that) and then being shrinked and stack upward, while the next item being start "writing" the full paragraph and the time line indicatore sync with its progress. 
-when the user continue -> the next item also being "backward written" and shrink & push up to be stack below the first item. -> the next item start writtent. 
+for that section we will want to make something really beutifull. lers redesine this, this as if you where Oz itself, how would he place it touch in this section?
 
-all this IS being controlled by the user acroll and not auto paly animation like the entrence itself. 
+this is being animated, not scrolled frame tracking, all happened without letting the user scroll untl the animation is being finished.
 
-so first things that iportant to notced to them, no need for the fade out animation in the summery section, we have the "backward" writtening for the exit animation, and the image is contonuing to the next section. 
+learn the pattern we are using when starting and ending animation from entering or comint back to section, and applaying to the implementation fo that section.
 
-we will start from scratch the Experiance section, delete the current component, and start again, do not use any matirial from there. 
+we will start from scratch the skills section, delete the current component, and start again, do not use any matirial from there. 
 
 use the remotion skill for the planing and the animation, write that in the proposal as instruction for every read, to remaind you to read those skill again. 
 
-now create /openspec:proposal experiance-section for that change. 
+now create /openspec:proposal skills-section for that change. 
