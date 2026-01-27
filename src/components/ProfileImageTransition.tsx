@@ -23,6 +23,12 @@ const IMPACT_TRANSITION_DURATION = 20; // Frames for image to move back to exper
 const SKILLS_TRANSITION_DELAY = 30; // Wait for impact exit animation to start
 const SKILLS_TRANSITION_DURATION = 45; // Frames for image to move to skills center (smooth)
 
+// Timing constants for contact transition
+const CONTACT_TRANSITION_DURATION = 15; // Matches skills exit duration (500ms)
+
+// Timing constants for wrap transition (contact→hero loop)
+const WRAP_TRANSITION_DELAY = 15; // Small delay after contact starts exiting
+
 /**
  * Profile image that starts inside the "O" letter and transitions
  * through sections as the user scrolls.
@@ -47,6 +53,7 @@ export function ProfileImageTransition() {
   const experienceVisibility = useSectionVisibility('experience');
   const impactVisibility = useSectionVisibility('impact');
   const skillsVisibility = useSectionVisibility('skills');
+  const contactVisibility = useSectionVisibility('contact');
 
   // Image appearance in the O (after title animation completes during intro)
   const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
@@ -70,6 +77,15 @@ export function ProfileImageTransition() {
   const isTransitioningToSkills = impactVisibility.isExiting && direction === 'forward';
   const isTransitioningFromSkills =
     skillsVisibility.isReversing || (skillsVisibility.isExiting && direction === 'backward');
+  const isTransitioningToContact = skillsVisibility.isExiting && direction === 'forward';
+  const isTransitioningFromContact =
+    contactVisibility.isReversing || (contactVisibility.isExiting && direction === 'backward');
+
+  // Wrap transition states (infinite loop)
+  // Forward wrap: Contact → Hero (image returns to "O" in "Oz")
+  const isWrappingToHero = contactVisibility.isExitingToWrap && direction === 'forward';
+  // Backward wrap: Hero → Contact (image goes from "O" to contact position)
+  const isWrappingToContact = heroVisibility.isExitingToWrap && direction === 'backward';
 
   // Hide when not on any relevant section
   if (
@@ -78,12 +94,17 @@ export function ProfileImageTransition() {
     !experienceVisibility.isVisible &&
     !impactVisibility.isVisible &&
     !skillsVisibility.isVisible &&
+    !contactVisibility.isVisible &&
     !isTransitioningToExperience &&
     !isTransitioningFromExperience &&
     !isTransitioningToImpact &&
     !isTransitioningFromImpact &&
     !isTransitioningToSkills &&
-    !isTransitioningFromSkills
+    !isTransitioningFromSkills &&
+    !isTransitioningToContact &&
+    !isTransitioningFromContact &&
+    !isWrappingToHero &&
+    !isWrappingToContact
   ) {
     return null;
   }
@@ -368,6 +389,32 @@ export function ProfileImageTransition() {
   const skillsImageSize = isMobile ? 60 : networkSize * 0.12;
 
   // ===========================================
+  // Contact section position calculations
+  // ===========================================
+  // Image appears above the "Ready to Build..." invitation text
+
+  const contactVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
+  const contactImageSize = isMobile ? 50 : 70; // Size in contact section
+
+  // Contact header height (section number + title + marginBottom)
+  const contactHeaderMarginBottom = responsiveSpacing(viewport.width, 16, 24);
+  const contactSectionNumberHeight =
+    (isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20)) + 10;
+  const contactHeaderTotalHeight = contactSectionNumberHeight + contactHeaderMarginBottom;
+
+  // Invitation text starts after header, with some space above for the image
+  // Position image centered horizontally, above the invitation text
+  const contactInvitationMarginTop = responsiveSpacing(viewport.width, 32, 50);
+
+  const contactX = viewport.width / 2;
+  // Y position: header height + space for image + gap before invitation
+  const contactY =
+    contactVerticalPadding +
+    contactHeaderTotalHeight +
+    contactInvitationMarginTop / 2 +
+    contactImageSize / 2;
+
+  // ===========================================
   // Calculate experience transition progress
   // ===========================================
 
@@ -506,6 +553,100 @@ export function ProfileImageTransition() {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
+  } else if (
+    isTransitioningToContact ||
+    contactVisibility.isEntering ||
+    contactVisibility.isActive ||
+    contactVisibility.isCurrent
+  ) {
+    // Skills exiting forward to Contact, or on Contact section - stay at skills position
+    skillsTransitionProgress = 1;
+  }
+
+  // ===========================================
+  // Calculate contact transition progress
+  // ===========================================
+
+  // Transition from skills → contact (0 = skills center position, 1 = contact position)
+  let contactTransitionProgress = 0;
+
+  if (isTransitioningToContact) {
+    // Skills exiting forward to contact - animate over the exit duration
+    contactTransitionProgress = interpolate(
+      sequenceFrame,
+      [0, CONTACT_TRANSITION_DURATION],
+      [0, 1],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+  } else if (contactVisibility.isEntering) {
+    if (contactVisibility.isEnteringBackward) {
+      // Entering backward from beyond - jump immediately
+      contactTransitionProgress = 1;
+    } else {
+      // Entering forward from skills - continue from where skills exit left off
+      // At this point skills exit is complete, so we're at contact position
+      contactTransitionProgress = 1;
+    }
+  } else if (contactVisibility.isActive || contactVisibility.isCurrent) {
+    // On contact section (active or buffering)
+    contactTransitionProgress = 1;
+  } else if (isTransitioningFromContact) {
+    // Contact reversing back to skills - move first
+    contactTransitionProgress = interpolate(
+      sequenceFrame,
+      [0, CONTACT_TRANSITION_DURATION],
+      [1, 0],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+  } else if (isWrappingToHero) {
+    // During wrap to hero, keep at contact position (wrap progress handles the rest)
+    contactTransitionProgress = 1;
+  }
+
+  // ===========================================
+  // Calculate wrap transition progress (infinite loop)
+  // ===========================================
+
+  // Forward wrap: Contact → Hero (0 = contact position, 1 = hero "O" position)
+  let wrapToHeroProgress = 0;
+
+  if (isWrappingToHero) {
+    // Contact exiting forward to hero via wrap - dramatic spring animation
+    const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
+    wrapToHeroProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 16, stiffness: 60 }, // Slower, smoother for dramatic effect
+    });
+  } else if (heroVisibility.isEnteringFromWrap && direction === 'forward') {
+    // Hero entering from wrap - continue the spring animation
+    const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
+    wrapToHeroProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 16, stiffness: 60 },
+    });
+  }
+
+  // Backward wrap: Hero → Contact (0 = hero position, 1 = contact position)
+  let wrapToContactProgress = 0;
+
+  if (isWrappingToContact) {
+    // Hero exiting backward to contact via wrap
+    const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
+    wrapToContactProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 16, stiffness: 60 },
+    });
+  } else if (contactVisibility.isEnteringFromWrap && direction === 'backward') {
+    // Contact entering from backward wrap
+    const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
+    wrapToContactProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 16, stiffness: 60 },
+    });
   }
 
   // Calculate scroll progress for mobile (0 = summary position, 1 = scrolled position)
@@ -635,19 +776,66 @@ export function ProfileImageTransition() {
     [experiencePositionHeight, impactImageSize]
   );
 
-  // Final position: interpolate from impact → skills center
-  const currentX = interpolate(skillsTransitionProgress, [0, 1], [impactPositionX, skillsCenterX]);
-  const currentY = interpolate(skillsTransitionProgress, [0, 1], [impactPositionY, skillsCenterY]);
-  const currentWidth = interpolate(
+  // Skills position: interpolate from impact → skills center
+  const skillsPositionX = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactPositionX, skillsCenterX]
+  );
+  const skillsPositionY = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactPositionY, skillsCenterY]
+  );
+  const skillsPositionWidth = interpolate(
     skillsTransitionProgress,
     [0, 1],
     [impactPositionWidth, skillsImageSize]
   );
-  const currentHeight = interpolate(
+  const skillsPositionHeight = interpolate(
     skillsTransitionProgress,
     [0, 1],
     [impactPositionHeight, skillsImageSize]
   );
+
+  // Contact position: interpolate from skills center → contact position
+  const contactPositionX = interpolate(contactTransitionProgress, [0, 1], [skillsPositionX, contactX]);
+  const contactPositionY = interpolate(contactTransitionProgress, [0, 1], [skillsPositionY, contactY]);
+  const contactPositionWidth = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsPositionWidth, contactImageSize]
+  );
+  const contactPositionHeight = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsPositionHeight, contactImageSize]
+  );
+
+  // ===========================================
+  // Final position with wrap transitions
+  // ===========================================
+
+  // For forward wrap (contact→hero): interpolate from contact position to hero "O" position
+  // For backward wrap (hero→contact): interpolate from hero "O" position to contact position
+  let currentX = contactPositionX;
+  let currentY = contactPositionY;
+  let currentWidth = contactPositionWidth;
+  let currentHeight = contactPositionHeight;
+
+  if (wrapToHeroProgress > 0) {
+    // Forward wrap: contact → hero "O"
+    currentX = interpolate(wrapToHeroProgress, [0, 1], [contactX, heroX]);
+    currentY = interpolate(wrapToHeroProgress, [0, 1], [contactY, heroY]);
+    currentWidth = interpolate(wrapToHeroProgress, [0, 1], [contactImageSize, oWidth]);
+    currentHeight = interpolate(wrapToHeroProgress, [0, 1], [contactImageSize, oHeight]);
+  } else if (wrapToContactProgress > 0) {
+    // Backward wrap: hero "O" → contact
+    currentX = interpolate(wrapToContactProgress, [0, 1], [heroX, contactX]);
+    currentY = interpolate(wrapToContactProgress, [0, 1], [heroY, contactY]);
+    currentWidth = interpolate(wrapToContactProgress, [0, 1], [oWidth, contactImageSize]);
+    currentHeight = interpolate(wrapToContactProgress, [0, 1], [oHeight, contactImageSize]);
+  }
 
   // Opacity: fade in during appearance, stay visible during transitions
   const opacity = isIntroComplete ? 1 : appearanceProgress;
@@ -676,7 +864,18 @@ export function ProfileImageTransition() {
     [experienceBorderPadding, 2]
   );
   // Grow border when at skills center (more prominent)
-  const borderPadding = interpolate(skillsTransitionProgress, [0, 1], [impactBorderPadding, 4]);
+  const skillsBorderPadding = interpolate(skillsTransitionProgress, [0, 1], [impactBorderPadding, 4]);
+  // Slightly smaller border in contact section
+  const contactBorderPadding = interpolate(contactTransitionProgress, [0, 1], [skillsBorderPadding, 3]);
+  // Border padding for wrap transitions
+  let borderPadding = contactBorderPadding;
+  if (wrapToHeroProgress > 0) {
+    // Forward wrap: contact → hero (shrink border back to hero size)
+    borderPadding = interpolate(wrapToHeroProgress, [0, 1], [3, 3]);
+  } else if (wrapToContactProgress > 0) {
+    // Backward wrap: hero → contact (grow border to contact size)
+    borderPadding = interpolate(wrapToContactProgress, [0, 1], [3, 3]);
+  }
 
   // Subtle shadow (reduces when scrolled/in timeline)
   const baseShadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
@@ -699,7 +898,22 @@ export function ProfileImageTransition() {
     [experienceShadowOpacity, 0.15]
   );
   // Add glow/shadow when at skills center (prominent center node)
-  const shadowOpacity = interpolate(skillsTransitionProgress, [0, 1], [impactShadowOpacity, 0.3]);
+  const skillsShadowOpacity = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactShadowOpacity, 0.3]
+  );
+  // Moderate shadow in contact section
+  const contactShadowOpacity = interpolate(contactTransitionProgress, [0, 1], [skillsShadowOpacity, 0.25]);
+  // Shadow for wrap transitions
+  let shadowOpacity = contactShadowOpacity;
+  if (wrapToHeroProgress > 0) {
+    // Forward wrap: contact → hero (reduce shadow as it returns to O)
+    shadowOpacity = interpolate(wrapToHeroProgress, [0, 1], [0.25, 0.1]);
+  } else if (wrapToContactProgress > 0) {
+    // Backward wrap: hero → contact (increase shadow)
+    shadowOpacity = interpolate(wrapToContactProgress, [0, 1], [0.1, 0.25]);
+  }
 
   return (
     <div

@@ -55,6 +55,7 @@ export type AnimationContext = {
   contentScrollOffset: number; // For CONTENT_SCROLL state
   maxContentScroll: number; // Max scroll for current section
   queuedDirection: ScrollDirection | null; // Scroll captured during lock
+  isWrapping: boolean; // True when transitioning across section boundaries (contact→hero or hero→contact)
 };
 
 /**
@@ -82,6 +83,7 @@ export type AnimationControllerReturn = {
   currentSection: number;
   previousSection: number | null;
   direction: ScrollDirection;
+  isWrapping: boolean; // True when in a wrap transition (contact→hero or hero→contact)
 
   // Animation values
   sequenceFrame: number;

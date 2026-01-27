@@ -409,6 +409,7 @@ export function useAnimationController(): AnimationControllerReturn {
     currentSection: context.currentSection,
     previousSection: context.previousSection,
     direction: context.direction,
+    isWrapping: context.isWrapping,
 
     // Animation values
     sequenceFrame: context.sequenceFrame,

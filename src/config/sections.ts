@@ -20,7 +20,12 @@ export const TYPEWRITER_PUNCTUATION_DELAY = 60; // Shorter pause for punctuation
 export const SECTIONS: SectionConfig[] = [
   {
     id: 'hero',
-    enterDuration: 110, // Uses existing intro animation
+    // enterDuration handles both:
+    // - Intro animation (first time): full 110 frames
+    // - Forward wrap from Contact: 15 delay + 60 animation = 75 frames (110 is plenty)
+    enterDuration: 110,
+    // reverseDuration for backward wrap to Contact
+    reverseDuration: 90, // Hero → Contact backward wrap: 60 frames (30 exit + 60 image move overlap)
     exitDuration: 45, // ~1.5s slide out
     exitDirection: 'left',
     hasOverflowContent: false,
@@ -59,17 +64,27 @@ export const SECTIONS: SectionConfig[] = [
     id: 'skills',
     // enterDuration needs to support:
     // - Forward from impact: 30 delay + image arrival (75) + 180 animation = 285 frames
-    // - Backward from contact: 30 delay + 180 animation = 210 frames
+    // - Backward from contact: 15 delay + 180 animation = 195 frames
     enterDuration: 285, // Max of forward and backward durations
-    reverseDuration: 90, // Reverse animation when going backward
-    exitDuration: 45,
+    reverseDuration: 195, // Backward entrance: 15 delay (wait for Contact exit) + 180 animation
+    exitDuration: 15, // 500ms fast exit (reverse of entrance animation)
     exitDirection: 'left',
     hasOverflowContent: false, // Animation-based, no scroll-driven content
   },
   {
     id: 'contact',
-    enterDuration: 75,
-    exitDuration: 45,
+    // enterDuration handles:
+    // - Forward from skills: 15 delay + 75 fast animation = 90 frames
+    // - Forward wrap from Hero: handled by wrap-specific logic in component
+    enterDuration: 90,
+    // reverseDuration handles backward entrance:
+    // - Backward from skills: 75 frames fast animation
+    // - Backward wrap from Hero: 15 delay + 45 animation = 60 frames
+    reverseDuration: 90, // Use 90 to accommodate both cases
+    // exitDuration handles forward exit:
+    // - Forward to Skills: 15 frames (500ms)
+    // - Forward wrap to Hero: 45 frames for dramatic exit (handled in component)
+    exitDuration: 45, // 1.5s exit animation for wrap transition
     exitDirection: 'right',
     hasOverflowContent: false,
   },

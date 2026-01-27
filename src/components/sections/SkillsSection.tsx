@@ -16,9 +16,9 @@ const PHASE_2_END = 150; // Categories expanded
 const PHASE_3_START = PHASE_2_END; // Skills start populating
 const TOTAL_ANIMATION_DURATION = 300; // Full animation
 const FAST_ENTER_DURATION = 180; // Compressed entrance
-const EXIT_DURATION = 90; // Exit animation duration
+const EXIT_DURATION = 15; // Exit animation duration (500ms at 30fps) - fast reverse of entrance
 const FORWARD_ENTRANCE_DELAY = 30; // Wait for Impact exit to start
-const BACKWARD_ENTRANCE_DELAY = 30; // Wait for Contact exit
+const BACKWARD_ENTRANCE_DELAY = 15; // Wait for Contact exit (500ms at 30fps)
 
 // Spring configs
 const CATEGORY_SPRING = { damping: 14, stiffness: 80 };
@@ -332,7 +332,12 @@ export function SkillsSection() {
 
           {/* Category nodes with skills - evenly spaced around center */}
           {skillCategories.map((category, categoryIndex) => {
-            const categoryPos = getCategoryPosition(categoryIndex, CATEGORY_COUNT, categoryRadiusX, categoryRadiusY);
+            const categoryPos = getCategoryPosition(
+              categoryIndex,
+              CATEGORY_COUNT,
+              categoryRadiusX,
+              categoryRadiusY
+            );
 
             // Staggered category animation - starts after image arrives at center
             const categoryDelay = categoryIndex * 10;
@@ -508,7 +513,8 @@ function OrbitRing({
 
     // Animate the phase - varied speeds based on seeds
     const speedMultiplier = 0.003 + i * 0.0015 + seed3 * 0.002;
-    const animatedPhase = breatheFrame * speedMultiplier + categoryIndex * 2.1 + i * 1.8 + seed1 * Math.PI;
+    const animatedPhase =
+      breatheFrame * speedMultiplier + categoryIndex * 2.1 + i * 1.8 + seed1 * Math.PI;
 
     // Generate the wavy path
     const path = generateWavyOrbitPath(
@@ -521,7 +527,8 @@ function OrbitRing({
     );
 
     // Varying opacity - medium speed breathing with unique phase
-    const layerOpacity = baseOpacity * (0.45 + Math.sin(breatheFrame * 0.012 + i * 1.2 + seed2 * Math.PI) * 0.2 + 0.2);
+    const layerOpacity =
+      baseOpacity * (0.45 + Math.sin(breatheFrame * 0.012 + i * 1.2 + seed2 * Math.PI) * 0.2 + 0.2);
 
     // Varying stroke width - slow pulsing with unique phase
     const strokeWidth = 2.5 + Math.sin(breatheFrame * 0.005 + i * 0.8 + seed1 * Math.PI) * 1.2;

@@ -58,8 +58,12 @@ export function useSectionVisibility(sectionId: SectionId): {
   isReversing: boolean;
   /** True when entering via backward scroll (from a later section) */
   isEnteringBackward: boolean;
+  /** True when entering via forward scroll with wrap (from contact to hero) */
+  isEnteringFromWrap: boolean;
+  /** True when exiting via wrap transition */
+  isExitingToWrap: boolean;
 } {
-  const { state, direction, isCurrentSection, isPreviousSection } = useAnimationContext();
+  const { state, direction, isCurrentSection, isPreviousSection, isWrapping } = useAnimationContext();
 
   const isCurrent = isCurrentSection(sectionId);
   const isPrevious = isPreviousSection(sectionId);
@@ -73,9 +77,15 @@ export function useSectionVisibility(sectionId: SectionId): {
   // Entering backward: current section during TRANSITIONING with backward direction
   const isEnteringBackward = isEntering && direction === 'backward';
 
+  // Entering from wrap: entering forward during a wrap transition (contact→hero or backward hero→contact)
+  const isEnteringFromWrap = isEntering && isWrapping;
+
   // Exiting: PREVIOUS section during TRANSITIONING (exits as new section enters)
   // OR current section during EXITING state (after content scroll)
   const isExiting = (isPrevious && state === 'TRANSITIONING') || (isCurrent && state === 'EXITING');
+
+  // Exiting to wrap: previous section during a wrap transition
+  const isExitingToWrap = isExiting && isWrapping;
 
   // Reversing: previous section going backward (should play reverse animation, not exit)
   const isReversing = isPrevious && state === 'TRANSITIONING' && direction === 'backward';
@@ -91,5 +101,7 @@ export function useSectionVisibility(sectionId: SectionId): {
     isActive,
     isReversing,
     isEnteringBackward,
+    isEnteringFromWrap,
+    isExitingToWrap,
   };
 }

@@ -13,6 +13,7 @@ export const initialAnimationContext: AnimationContext = {
   contentScrollOffset: 0,
   maxContentScroll: 0,
   queuedDirection: null,
+  isWrapping: false, // True when looping from contact→hero or hero→contact
 };
 
 /**
@@ -45,15 +46,16 @@ export function animationReducer(
         return state;
       }
 
+      // Infinite loop: use modulo wrapping instead of clamping
       const nextSection =
         action.direction === 'forward'
-          ? Math.min(state.currentSection + 1, TOTAL_SECTIONS - 1)
-          : Math.max(state.currentSection - 1, 0);
+          ? (state.currentSection + 1) % TOTAL_SECTIONS // Wraps from contact(5) → hero(0)
+          : (state.currentSection - 1 + TOTAL_SECTIONS) % TOTAL_SECTIONS; // Wraps from hero(0) → contact(5)
 
-      // If at boundaries, stay in IDLE
-      if (nextSection === state.currentSection) {
-        return state;
-      }
+      // Detect if this is a wrap transition (crossing boundaries)
+      const isWrapping =
+        (action.direction === 'forward' && state.currentSection === TOTAL_SECTIONS - 1) || // contact → hero
+        (action.direction === 'backward' && state.currentSection === 0); // hero → contact
 
       return {
         ...state,
@@ -63,6 +65,7 @@ export function animationReducer(
         direction: action.direction,
         sequenceFrame: 0,
         contentScrollOffset: 0,
+        isWrapping,
       };
     }
 
@@ -79,11 +82,10 @@ export function animationReducer(
       // Using separate EXITING then TRANSITIONING would reset sequenceFrame mid-animation
 
       if (action.direction === 'backward') {
-        const prevSection = Math.max(state.currentSection - 1, 0);
-        if (prevSection === state.currentSection) {
-          // At first section, can't go back
-          return state;
-        }
+        // Infinite loop: wrap from hero(0) → contact(5)
+        const prevSection = (state.currentSection - 1 + TOTAL_SECTIONS) % TOTAL_SECTIONS;
+        const isWrapping = state.currentSection === 0; // hero → contact
+
         return {
           ...state,
           state: 'TRANSITIONING',
@@ -91,15 +93,14 @@ export function animationReducer(
           currentSection: prevSection,
           direction: 'backward',
           sequenceFrame: 0,
+          isWrapping,
         };
       }
 
-      // Forward direction
-      const nextSection = Math.min(state.currentSection + 1, TOTAL_SECTIONS - 1);
-      if (nextSection === state.currentSection) {
-        // At last section, can't go forward
-        return state;
-      }
+      // Forward direction: wrap from contact(5) → hero(0)
+      const nextSection = (state.currentSection + 1) % TOTAL_SECTIONS;
+      const isWrapping = state.currentSection === TOTAL_SECTIONS - 1; // contact → hero
+
       return {
         ...state,
         state: 'TRANSITIONING',
@@ -107,6 +108,7 @@ export function animationReducer(
         currentSection: nextSection,
         direction: 'forward',
         sequenceFrame: 0,
+        isWrapping,
       };
     }
 
@@ -145,6 +147,7 @@ export function animationReducer(
             // Always start at top - each section has its own scroll range
             // The previous section's contentScrollOffset doesn't apply to this section
             contentScrollOffset: 0,
+            isWrapping: false, // Reset wrap flag when entering content scroll
           };
         }
 
@@ -159,19 +162,16 @@ export function animationReducer(
 
       if (state.state === 'EXITING') {
         // After exit animation, start transitioning to next/prev section
+        // Infinite loop: use modulo wrapping
         const nextSection =
           state.direction === 'forward'
-            ? Math.min(state.currentSection + 1, TOTAL_SECTIONS - 1)
-            : Math.max(state.currentSection - 1, 0);
+            ? (state.currentSection + 1) % TOTAL_SECTIONS
+            : (state.currentSection - 1 + TOTAL_SECTIONS) % TOTAL_SECTIONS;
 
-        // If at boundaries, go to BUFFERING instead
-        if (nextSection === state.currentSection) {
-          return {
-            ...state,
-            state: 'BUFFERING',
-            // Keep sequenceFrame at final value
-          };
-        }
+        // Detect if this is a wrap transition
+        const isWrapping =
+          (state.direction === 'forward' && state.currentSection === TOTAL_SECTIONS - 1) ||
+          (state.direction === 'backward' && state.currentSection === 0);
 
         // Starting new transition - NOW reset sequenceFrame
         return {
@@ -181,6 +181,7 @@ export function animationReducer(
           currentSection: nextSection,
           sequenceFrame: 0,
           contentScrollOffset: 0,
+          isWrapping,
         };
       }
 
@@ -193,6 +194,7 @@ export function animationReducer(
         ...state,
         state: 'IDLE',
         queuedDirection: null,
+        isWrapping: false, // Reset wrap flag when transition completes
       };
     }
 
