@@ -19,9 +19,9 @@ export const colors = {
   backgroundDark: { r: 5, g: 12, b: 25 } as RGBColor,
 
   // Primary/Accent
-  accent: { r: 251, g: 191, b: 36 } as RGBColor, // Gold/Amber #fbbf24
-  accentLight: { r: 253, g: 224, b: 71 } as RGBColor,
-  accentDark: { r: 217, g: 119, b: 6 } as RGBColor,
+  accent: { r: 205, g: 127, b: 50 } as RGBColor, // Bronze #cd7f32
+  accentLight: { r: 222, g: 160, b: 90 } as RGBColor, // Light bronze
+  accentDark: { r: 166, g: 100, b: 40 } as RGBColor, // Dark bronze
 
   // Text
   textPrimary: { r: 255, g: 255, b: 255 } as RGBColor,

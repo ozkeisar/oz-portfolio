@@ -18,7 +18,7 @@ export const FRAME_CONFIG = {
 
 export const TOTAL_FRAMES = 900;
 export const FPS = 30; // Virtual FPS for spring calculations
-export const ENTRANCE_DURATION_FRAMES = 150; // 5 seconds at 30fps - slow, deliberate artist pace
+export const ENTRANCE_DURATION_FRAMES = 110; // ~3.7 seconds at 30fps
 
 type ScrollContextValue = {
   frame: number;

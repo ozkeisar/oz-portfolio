@@ -8,24 +8,14 @@ type OzKeisarTextProps = {
 
 /**
  * Custom easing that mimics brush/pen movement:
- * - Slight hesitation at start (artist placing brush)
- * - Smooth acceleration into the stroke
- * - Gradual deceleration at end (brush lifting)
+ * - Smooth, consistent drawing speed throughout
+ * - Slight ease-in at start (brush touching canvas)
+ * - Slight ease-out at end (brush lifting)
  */
 function artistEase(t: number): number {
-  // Bezier-like curve: slow start, smooth middle, slow end
-  if (t < 0.15) {
-    // Initial hesitation - artist placing brush
-    return t * t * 4.44; // Slow start
-  } else if (t < 0.85) {
-    // Main stroke - smooth consistent movement
-    const adjusted = (t - 0.15) / 0.7;
-    return 0.1 + adjusted * 0.8;
-  } else {
-    // Brush lifting - deceleration
-    const adjusted = (t - 0.85) / 0.15;
-    return 0.9 + (1 - (1 - adjusted) * (1 - adjusted)) * 0.1;
-  }
+  // Smooth ease-in-out for natural brush movement
+  // Using a sine-based easing for organic feel
+  return t - Math.sin(t * Math.PI * 2) / (Math.PI * 2.5);
 }
 
 /**
@@ -48,11 +38,7 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
     return interpolate(eased, [0, 1], [totalLength, 0]);
   };
 
-  // Fill fades in gently at the end
-  const fillOpacity = interpolate(progress, [0.92, 1], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  // O no longer has fill - profile image will show through
 
   return (
     <svg
@@ -65,25 +51,21 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
     >
       <title>Oz Keisar</title>
 
-      {/* O - smooth oval, drawn as single continuous stroke */}
-      {/* Artist draws O slowly, feeling the curve */}
+      {/* O - smooth oval (no fill - profile image shows through) */}
       <path
         d="M8 35 C8 18, 22 6, 35 6 C48 6, 62 18, 62 35 C62 52, 48 64, 35 64 C22 64, 8 52, 8 35 Z"
         stroke={color}
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"
-        fill={color}
-        fillOpacity={fillOpacity}
+        fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0, 0.18),
+          strokeDashoffset: getLetterDashOffset(0, 0.95),
         }}
       />
 
-      {/* Small pause before z (0.18 to 0.20) - artist lifts brush */}
-
-      {/* z - flowing z with diagonal sweep */}
+      {/* z - diagonal sweep */}
       <path
         d="M72 24 L96 24 C92 32, 80 48, 72 56 L98 56"
         stroke={color}
@@ -93,13 +75,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.2, 0.32),
+          strokeDashoffset: getLetterDashOffset(0, 0.75),
         }}
       />
 
-      {/* Longer pause before K (0.32 to 0.36) - moving to new word */}
-
-      {/* K - vertical stem first, artist grounds the letter */}
+      {/* K - vertical stem */}
       <path
         d="M120 10 L120 60"
         stroke={color}
@@ -108,11 +88,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.36, 0.44),
+          strokeDashoffset: getLetterDashOffset(0, 0.55),
         }}
       />
 
-      {/* K - diagonal strokes, flowing from top-right */}
+      {/* K - diagonal strokes */}
       <path
         d="M148 10 L120 38 L152 60"
         stroke={color}
@@ -122,13 +102,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.44, 0.54),
+          strokeDashoffset: getLetterDashOffset(0, 0.7),
         }}
       />
 
-      {/* Brief pause (0.54 to 0.56) */}
-
-      {/* e - curved e, one flowing motion */}
+      {/* e - curved e */}
       <path
         d="M160 40 L184 40 C184 28, 174 22, 166 22 C156 22, 150 32, 150 42 C150 54, 160 60, 172 58 C178 57, 184 52, 186 46"
         stroke={color}
@@ -138,11 +116,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.56, 0.66),
+          strokeDashoffset: getLetterDashOffset(0, 0.8),
         }}
       />
 
-      {/* i - stem drawn with intention */}
+      {/* i - stem (short, finishes early) */}
       <path
         d="M198 26 L198 58"
         stroke={color}
@@ -151,23 +129,21 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.66, 0.71),
+          strokeDashoffset: getLetterDashOffset(0, 0.4),
         }}
       />
 
-      {/* i dot - quick flick, appears after stem */}
+      {/* i dot */}
       <circle
         cx="198"
         cy="14"
         r="3"
         fill={color}
-        opacity={interpolate(progress, [0.71, 0.73], [0, 1], {
+        opacity={interpolate(progress, [0.38, 0.42], [0, 1], {
           extrapolateLeft: 'clamp',
           extrapolateRight: 'clamp',
         })}
       />
-
-      {/* Brief pause (0.73 to 0.75) */}
 
       {/* s - flowing s curve */}
       <path
@@ -179,11 +155,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.75, 0.84),
+          strokeDashoffset: getLetterDashOffset(0, 0.85),
         }}
       />
 
-      {/* a - rounded a, drawn in one motion */}
+      {/* a - rounded a */}
       <path
         d="M256 58 C244 58, 236 50, 236 42 C236 32, 246 24, 256 24 C266 24, 272 32, 272 42 L272 58"
         stroke={color}
@@ -193,11 +169,11 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.84, 0.93),
+          strokeDashoffset: getLetterDashOffset(0, 0.88),
         }}
       />
 
-      {/* r - final letter, ends with a gentle lift */}
+      {/* r - final letter */}
       <path
         d="M284 58 L284 36 C284 28, 292 24, 302 26"
         stroke={color}
@@ -207,7 +183,7 @@ export function OzKeisarText({ progress, color, width }: OzKeisarTextProps) {
         fill="none"
         style={{
           strokeDasharray: totalLength,
-          strokeDashoffset: getLetterDashOffset(0.93, 1),
+          strokeDashoffset: getLetterDashOffset(0, 0.5),
         }}
       />
     </svg>

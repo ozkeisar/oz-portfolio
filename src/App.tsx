@@ -1,4 +1,5 @@
 import { AnimationCanvas } from './components/AnimationCanvas';
+import { ProfileImageTransition } from './components/ProfileImageTransition';
 import { ScrollController } from './components/ScrollController';
 import { ContactSection } from './components/sections/ContactSection';
 import { ExperienceSection } from './components/sections/ExperienceSection';
@@ -18,6 +19,7 @@ function App() {
         <ImpactSection />
         <SkillsSection />
         <ContactSection />
+        <ProfileImageTransition />
       </ScrollController>
     </AnimationCanvas>
   );

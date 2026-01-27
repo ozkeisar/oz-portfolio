@@ -15,3 +15,15 @@ the opacity and dynamic changing, read that and trully understand how that work,
 (write this down as absolute requierments in the /Users/ozkeisar/oz-portfolio/openspec/project.md before you making any changes and before starting the brainstorming, do NOT start filling the rest of the file or reading the rest of the openspec files)
 
 after that lets start developing the arch of the site, what is the best way to build the component and what info gose where? how can we implement that both mobile and pc will have that stunning animation when component have different values (ALL have to dynamicly change according to screen size), what is the best ux to present the info for the relevant people will see this and leanr in the fastes way the most important info about Oz? how the element on the screen will move between phases as the user acroll? all that and more! let start. 
+
+---
+
+great work, now i wnat to change fandamentaly how the text and element entering and leaving the page (exept for the image component).
+lets start by making that all text will be written, letter by letter, making the section to be written one by one, first the upper section then the next and so. 
+for the exit animation, i thought of that each section will faid out moving horizantly to each direction, so the top section will move as one to the left and dissapear, the next section will move tothe right and so on. 
+
+now for the actual flow itself, i want to do this, currently the "aniamtion" is being powered by the user scroll and positioning, so if he scroll a bit upward, the animation is being tracked precisly with the exact frame. but i want it to be more like a gameplay of animation + frame tracking, but combine them to be complete flow of animation perfectly.
+so what do i mean? like we have the first animation in the start where the title is being animated (using svg), the user cant scroll until the animation is finished, then afterward, the scroll tracking is powering the frame changing. so i want it to be like this, the user first seeing the animated title and the complete intro -> start scrolling - that trigger the next animation of the -> iamge being moved to the next posiotion - sync with the intro elements disappearing - writing text start until complete (while this happening the app isnt responding to other scroll event until the animation finished + buffer) -> user continue to scroll -> the content of the page is "scrolling" a bit (animated up to revele content that isnt being shown becouse of small screen size, the "scroll" amout need to be calucalted from the screen size and the content size to see how much we need to scroll to the let the user see all the content in the section.) -> the exit animation is starting (not frame changing by scrolling but like a "video" that playing) and the next section entering (we will abjust the next section later). 
+so by that, is the user scroll up again, the animation Will play backward, again with not letting the user trigger the scroll mechanisem that effect frame up until the animation done playing + buffer. 
+
+is something not understanding to you? if so ask now.

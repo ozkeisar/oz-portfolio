@@ -1,41 +1,43 @@
-import { responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
+import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbString } from '../../utils/colors';
 import { FPS, getSectionProgress, useScrollContext } from '../ScrollController';
 import { OzKeisarText } from '../text/OzKeisarText';
-import { SubtitleText } from '../text/SubtitleText';
 
 export function HeroSection() {
   const { frame, viewport, entranceFrame, isEntranceComplete } = useScrollContext();
   const sectionProgress = getSectionProgress(frame, 'hero');
 
   // Calculate text drawing progress (0-1) based on entrance frame
-  // Title draws from frame 0 to 100 (~3.3 seconds) - slow, deliberate artist pace
-  const titleDrawProgress = interpolate(entranceFrame, [0, 100], [0, 1], {
+  // Title draws from frame 0 to 90 (3 seconds)
+  const titleDrawProgress = interpolate(entranceFrame, [0, 90], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
-  // Subtitle draws from frame 90 to 130 (starts near end of title)
-  const subtitleDrawProgress = interpolate(entranceFrame, [90, 130], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  // Accent line animation (appears after subtitle starts)
-  const accentLineProgress = spring({
-    frame: entranceFrame - 115,
+  // Subtitle spring animation (appears as title nears completion)
+  const subtitleProgress = spring({
+    frame: entranceFrame - 75,
     fps: FPS,
-    config: { damping: 18, stiffness: 80 }, // Softer spring for elegant appearance
+    config: { damping: 14, stiffness: 100 },
+  });
+  const subtitleOpacity = interpolate(subtitleProgress, [0, 1], [0, 1]);
+  const subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0]);
+
+  // Accent line animation (appears with subtitle)
+  const accentLineProgress = spring({
+    frame: entranceFrame - 85,
+    fps: FPS,
+    config: { damping: 14, stiffness: 120 },
   });
   const accentLineWidth = interpolate(accentLineProgress, [0, 1], [0, 80]);
   const accentLineOpacity = interpolate(accentLineProgress, [0, 1], [0, 1]);
 
-  // Scroll indicator animation (appears last, gentle fade in)
+  // Scroll indicator animation (appears right after)
   const scrollIndicatorProgress = spring({
-    frame: entranceFrame - 135,
+    frame: entranceFrame - 100,
     fps: FPS,
-    config: { damping: 20, stiffness: 60 }, // Very soft spring for subtle entrance
+    config: { damping: 14, stiffness: 100 },
   });
   const scrollIndicatorOpacity = interpolate(scrollIndicatorProgress, [0, 1], [0, 1]);
   const scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
@@ -56,7 +58,6 @@ export function HeroSection() {
 
   // Responsive sizes
   const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
-  const subtitleWidth = responsiveValue(viewport.width, 300, 650, 320, 1200);
   const padding = responsiveSpacing(viewport.width, 20, 40);
 
   // Bounce animation for scroll indicator
@@ -84,18 +85,22 @@ export function HeroSection() {
         width={titleWidth}
       />
 
-      {/* Subtitle - SVG with handwriting animation */}
-      <div
+      {/* Subtitle - spring animation entrance */}
+      <p
         style={{
+          margin: 0,
           marginTop: responsiveSpacing(viewport.width, 16, 24),
+          fontSize: responsiveFontSize(viewport.width, 16, 22),
+          fontWeight: 400,
+          color: toRgbString(colors.textSecondary),
+          fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+          letterSpacing: '0.5px',
+          opacity: subtitleOpacity,
+          transform: `translateY(${subtitleY}px)`,
         }}
       >
-        <SubtitleText
-          progress={subtitleDrawProgress}
-          color={toRgbString(colors.textSecondary)}
-          width={subtitleWidth}
-        />
-      </div>
+        Engineering Manager & AI Innovation Lead
+      </p>
 
       {/* Accent line */}
       <div
