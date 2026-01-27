@@ -33,8 +33,15 @@ const FORWARD_ENTRANCE_DELAY = 110; // Wait for Summary text deletion before app
  * - Bidirectional navigation (forward and backward)
  */
 export function ExperienceSection() {
-  const { sequenceFrame, direction, viewport, contentScrollOffset, setMaxContentScroll, state } =
-    useAnimationContext();
+  const {
+    sequenceFrame,
+    direction,
+    viewport,
+    contentScrollOffset,
+    setMaxContentScroll,
+    setContentScrollOffset,
+    state,
+  } = useAnimationContext();
   const { isVisible, isExiting, isReversing, isEntering, isActive, isEnteringBackward } =
     useSectionVisibility('experience');
 
@@ -43,22 +50,40 @@ export function ExperienceSection() {
 
   // Ref for content measurement
   const contentRef = useRef<HTMLDivElement>(null);
+  // Track if we've already set scroll for backward entry
+  const hasSetBackwardScroll = useRef(false);
 
   // Responsive breakpoints
   const isMobile = viewport.width < 768;
 
   // Set max content scroll when section becomes active
+  // Also jump to end when entering backward from Impact
   useEffect(() => {
     if (isActive) {
       const totalScroll = getTotalExperienceScroll();
       setMaxContentScroll(totalScroll);
+
+      // When entering backward (from Impact), jump to the end of the timeline
+      if (isEnteringBackward || hasSetBackwardScroll.current) {
+        // Jump to max scroll to show last item
+        setContentScrollOffset(totalScroll);
+        hasSetBackwardScroll.current = false;
+      }
     }
-  }, [isActive, setMaxContentScroll]);
+  }, [isActive, setMaxContentScroll, setContentScrollOffset, isEnteringBackward]);
+
+  // Track backward entry for when section becomes active
+  useEffect(() => {
+    if (isEnteringBackward) {
+      hasSetBackwardScroll.current = true;
+    }
+  }, [isEnteringBackward]);
 
   // Reset scroll when section is no longer visible
   useEffect(() => {
     if (!isVisible) {
       setMaxContentScroll(0);
+      hasSetBackwardScroll.current = false;
     }
   }, [isVisible, setMaxContentScroll]);
 
@@ -72,6 +97,9 @@ export function ExperienceSection() {
   // When isReversing (exiting backward), we reverse the animation
   const REVERSE_DURATION = 60; // Frames for reverse animation
 
+  // Detect if exiting forward (to Impact)
+  const isExitingForward = isExiting && direction === 'forward';
+
   let entranceProgress: number;
   if (isReversing) {
     // Reversing: fade out from 1 → 0
@@ -79,6 +107,9 @@ export function ExperienceSection() {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
+  } else if (isExitingForward) {
+    // Exiting forward to Impact: keep at 1, exit animation handles fade
+    entranceProgress = 1;
   } else if (isEnteringForward) {
     // Forward entrance: delay until Summary text deletion is mostly done
     const delayedFrame = Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY);
@@ -126,7 +157,14 @@ export function ExperienceSection() {
 
   // Calculate scroll state for timeline progression
   // Only apply scroll when in CONTENT_SCROLL state or active
-  const activeScrollOffset = isActive || state === 'CONTENT_SCROLL' ? contentScrollOffset : 0;
+  // When entering backward or exiting forward, use max scroll to show last item
+  const totalScroll = getTotalExperienceScroll();
+  const activeScrollOffset =
+    isEnteringBackward || isExitingForward
+      ? totalScroll
+      : isActive || state === 'CONTENT_SCROLL'
+        ? contentScrollOffset
+        : 0;
   const scrollState = getTimelineScrollState(activeScrollOffset);
 
   // Exit animation
@@ -188,7 +226,9 @@ export function ExperienceSection() {
 
   // During entrance, show first item writing
   // After entrance, use scroll state to determine what to show
-  const isEntrancePhase = isEntering && !isReversing && sequenceFrame < ENTRANCE_DURATION;
+  // Skip entrance phase when entering backward - show last item immediately
+  const isEntrancePhase =
+    isEntering && !isReversing && !isEnteringBackward && sequenceFrame < ENTRANCE_DURATION;
 
   // Calculate first item typewriter progress during entrance
   const entranceTypewriterProgress = isEntrancePhase

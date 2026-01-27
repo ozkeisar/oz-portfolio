@@ -89,11 +89,13 @@ export function useAnimationController(): AnimationControllerReturn {
       const frameDuration = 1000 / FPS;
       const currentFrame = Math.floor(elapsed / frameDuration);
 
-      // Get target duration based on state
+      // Get target duration based on state and direction
       const sectionConfig = SECTIONS[context.currentSection];
       const targetDuration =
         context.state === 'TRANSITIONING'
-          ? sectionConfig.enterDuration
+          ? context.direction === 'backward' && sectionConfig.reverseDuration
+            ? sectionConfig.reverseDuration
+            : sectionConfig.enterDuration
           : sectionConfig.exitDuration;
 
       if (currentFrame >= targetDuration) {
@@ -380,12 +382,20 @@ export function useAnimationController(): AnimationControllerReturn {
     dispatch({ type: 'SET_MAX_CONTENT_SCROLL', maxScroll });
   }, []);
 
+  const setContentScrollOffset = useCallback((offset: number) => {
+    dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset });
+  }, []);
+
   // ========================================
   // Computed Values
   // ========================================
   const sectionConfig = SECTIONS[context.currentSection];
   const targetDuration =
-    context.state === 'EXITING' ? sectionConfig.exitDuration : sectionConfig.enterDuration;
+    context.state === 'EXITING'
+      ? sectionConfig.exitDuration
+      : context.direction === 'backward' && sectionConfig.reverseDuration
+        ? sectionConfig.reverseDuration
+        : sectionConfig.enterDuration;
 
   const sequenceProgress =
     targetDuration > 0 ? Math.min(context.sequenceFrame / targetDuration, 1) : 0;
@@ -420,5 +430,6 @@ export function useAnimationController(): AnimationControllerReturn {
 
     // Manual control
     setMaxContentScroll,
+    setContentScrollOffset,
   };
 }

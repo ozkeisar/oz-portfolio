@@ -2,7 +2,7 @@ import ozPhoto from '../assets/oz-photo.webp';
 import { FPS } from '../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../context/AnimationContext';
 import { EXPERIENCE_ITEM_COUNT } from '../data/experienceData';
-import { getTimelineScrollState } from '../hooks/useTimelineScroll';
+import { getTimelineScrollState, getTotalExperienceScroll } from '../hooks/useTimelineScroll';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../hooks/useViewport';
 import { interpolate, spring } from '../utils/animation';
 import { colors, toRgbString } from '../utils/colors';
@@ -14,6 +14,10 @@ const IMAGE_MOVE_DURATION = 30; // Duration for image to move back to hero (fast
 // Timing constants for experience transition
 const EXPERIENCE_TRANSITION_DELAY = 110; // Wait for summary text deletion before moving (~3.7s at 30fps)
 const EXPERIENCE_TRANSITION_DURATION = 30; // Frames for image to move to experience position
+
+// Timing constants for impact transition
+const IMPACT_TRANSITION_DELAY = 10; // Small delay to sync with experience exit start
+const IMPACT_TRANSITION_DURATION = 20; // Frames for image to move back to experience (fast)
 
 /**
  * Profile image that starts inside the "O" letter and transitions
@@ -37,6 +41,7 @@ export function ProfileImageTransition() {
   const heroVisibility = useSectionVisibility('hero');
   const summaryVisibility = useSectionVisibility('summary');
   const experienceVisibility = useSectionVisibility('experience');
+  const impactVisibility = useSectionVisibility('impact');
 
   // Image appearance in the O (after title animation completes during intro)
   const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
@@ -54,14 +59,20 @@ export function ProfileImageTransition() {
   const isTransitioningFromExperience =
     experienceVisibility.isReversing ||
     (experienceVisibility.isExiting && direction === 'backward');
+  const isTransitioningToImpact = experienceVisibility.isExiting && direction === 'forward';
+  const isTransitioningFromImpact =
+    impactVisibility.isReversing || (impactVisibility.isExiting && direction === 'backward');
 
   // Hide when not on any relevant section
   if (
     !heroVisibility.isVisible &&
     !summaryVisibility.isVisible &&
     !experienceVisibility.isVisible &&
+    !impactVisibility.isVisible &&
     !isTransitioningToExperience &&
-    !isTransitioningFromExperience
+    !isTransitioningFromExperience &&
+    !isTransitioningToImpact &&
+    !isTransitioningFromImpact
   ) {
     return null;
   }
@@ -221,8 +232,14 @@ export function ProfileImageTransition() {
   const lastDotY = railHeight - 20;
 
   // Get scroll state for timeline position (same calculation as ExperienceSection)
-  const experienceScrollOffset =
-    experienceVisibility.isActive || state === 'CONTENT_SCROLL' ? contentScrollOffset : 0;
+  // When entering backward from Impact, use max scroll to position at bottom of timeline
+  // When exiting to Impact, preserve current scroll position (at bottom)
+  const totalExperienceScroll = getTotalExperienceScroll();
+  const experienceScrollOffset = experienceVisibility.isEnteringBackward
+    ? totalExperienceScroll
+    : experienceVisibility.isActive || state === 'CONTENT_SCROLL' || isTransitioningToImpact
+      ? contentScrollOffset
+      : 0;
   const expScrollState = getTimelineScrollState(experienceScrollOffset);
   const progressY = interpolate(
     expScrollState.currentItemIndex + expScrollState.localProgress,
@@ -270,6 +287,45 @@ export function ProfileImageTransition() {
   const experienceImageSize = isMobile ? expMobileImageSize : timelineImageSize;
 
   // ===========================================
+  // Impact section position calculations
+  // ===========================================
+  // Must match ImpactSection layout exactly
+
+  // Impact layout constants (from ImpactSection)
+  const impactVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
+  const impactContentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+  const impactImageSize = isMobile ? 32 : 40; // Matches Impact header image size
+
+  // Impact content left edge for positioning
+  const impactContentLeftEdge = (viewport.width - impactContentMaxWidth) / 2;
+
+  // Impact header position - image in header row like Experience
+  const impactMobileX = impactContentLeftEdge + impactImageSize / 2;
+  const impactDesktopX = impactContentLeftEdge + impactImageSize / 2;
+
+  // Account for header entrance animation
+  // The header has transform: translateY(headerY) where headerY goes 20 → 0
+  // We need to apply the same offset so the image follows the header
+  let impactHeaderAnimationOffset = 0;
+  if (impactVisibility.isEntering && !impactVisibility.isEnteringBackward) {
+    // Calculate the same delayed entrance progress as ImpactSection
+    const delayedFrame = Math.max(0, sequenceFrame - IMPACT_TRANSITION_DELAY);
+    const entranceProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 14, stiffness: 80 },
+    });
+    // Header Y offset during entrance animation (20 → 0)
+    impactHeaderAnimationOffset = interpolate(entranceProgress, [0, 1], [20, 0]);
+  }
+
+  const impactMobileY = impactVerticalPadding + impactImageSize / 2 + impactHeaderAnimationOffset;
+  const impactDesktopY = impactVerticalPadding + impactImageSize / 2 + impactHeaderAnimationOffset;
+
+  const impactX = isMobile ? impactMobileX : impactDesktopX;
+  const impactY = isMobile ? impactMobileY : impactDesktopY;
+
+  // ===========================================
   // Calculate experience transition progress
   // ===========================================
 
@@ -301,6 +357,9 @@ export function ProfileImageTransition() {
   } else if (experienceVisibility.isActive) {
     // On experience section (not transitioning)
     experienceTransitionProgress = 1;
+  } else if (isTransitioningToImpact || impactVisibility.isEntering || impactVisibility.isActive || impactVisibility.isCurrent) {
+    // Experience exiting forward to Impact, or on Impact section (including buffering) - stay at experience position
+    experienceTransitionProgress = 1;
   } else if (isTransitioningFromExperience) {
     // Experience reversing back to summary - move first, then text writes
     experienceTransitionProgress = interpolate(
@@ -309,6 +368,46 @@ export function ProfileImageTransition() {
       [1, 0],
       { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
     );
+  }
+
+  // ===========================================
+  // Calculate impact transition progress
+  // ===========================================
+
+  // Transition from experience → impact (0 = experience position, 1 = impact position)
+  let impactTransitionProgress = 0;
+
+  if (isTransitioningToImpact) {
+    // Experience exiting forward to impact - WAIT for experience exit animation, then move
+    // Use same spring timing as Impact header/spacer for coordinated animation
+    const delayedFrame = Math.max(0, sequenceFrame - IMPACT_TRANSITION_DELAY);
+    impactTransitionProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 14, stiffness: 80 },
+    });
+  } else if (impactVisibility.isEntering) {
+    if (impactVisibility.isEnteringBackward) {
+      // Entering backward from later section - jump immediately
+      impactTransitionProgress = 1;
+    } else {
+      // Entering forward from experience - continue animation with same spring timing
+      const delayedFrame = Math.max(0, sequenceFrame - IMPACT_TRANSITION_DELAY);
+      impactTransitionProgress = spring({
+        frame: delayedFrame,
+        fps: FPS,
+        config: { damping: 14, stiffness: 80 },
+      });
+    }
+  } else if (impactVisibility.isActive || impactVisibility.isCurrent) {
+    // On impact section (active or buffering)
+    impactTransitionProgress = 1;
+  } else if (isTransitioningFromImpact) {
+    // Impact reversing back to experience - move first, then experience writes
+    impactTransitionProgress = interpolate(sequenceFrame, [0, IMPACT_TRANSITION_DURATION], [1, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
   }
 
   // Calculate scroll progress for mobile (0 = summary position, 1 = scrolled position)
@@ -393,27 +492,41 @@ export function ProfileImageTransition() {
     ? interpolate(mobileScrollProgress, [0, 1], [baseHeight, mobileScrolledSize])
     : baseHeight;
 
-  // Final position: interpolate from summary scrolled → experience
+  // Position: interpolate from summary scrolled → experience
   // Experience position on desktop follows the timeline; on mobile stays in header
-  const currentX = interpolate(
+  const experiencePositionX = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryScrolledX, experienceX]
   );
-  const currentY = interpolate(
+  const experiencePositionY = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryScrolledY, experienceY]
   );
-  const currentWidth = interpolate(
+  const experiencePositionWidth = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryScrolledWidth, experienceImageSize]
   );
-  const currentHeight = interpolate(
+  const experiencePositionHeight = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryScrolledHeight, experienceImageSize]
+  );
+
+  // Final position: interpolate from experience → impact
+  const currentX = interpolate(impactTransitionProgress, [0, 1], [experiencePositionX, impactX]);
+  const currentY = interpolate(impactTransitionProgress, [0, 1], [experiencePositionY, impactY]);
+  const currentWidth = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experiencePositionWidth, impactImageSize]
+  );
+  const currentHeight = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experiencePositionHeight, impactImageSize]
   );
 
   // Opacity: fade in during appearance, stay visible during transitions
@@ -431,11 +544,13 @@ export function ProfileImageTransition() {
     ? interpolate(mobileScrollProgress, [0, 1], [baseBorderPadding, 2])
     : baseBorderPadding;
   // Shrink border when in experience timeline
-  const borderPadding = interpolate(
+  const experienceBorderPadding = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryBorderPadding, 2]
   );
+  // Keep small border in impact section
+  const borderPadding = interpolate(impactTransitionProgress, [0, 1], [experienceBorderPadding, 2]);
 
   // Subtle shadow (reduces when scrolled/in timeline)
   const baseShadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
@@ -446,10 +561,16 @@ export function ProfileImageTransition() {
     ? interpolate(mobileScrollProgress, [0, 1], [baseShadowOpacity, 0.15])
     : baseShadowOpacity;
   // Reduce shadow when in experience timeline
-  const shadowOpacity = interpolate(
+  const experienceShadowOpacity = interpolate(
     experienceTransitionProgress,
     [0, 1],
     [summaryShadowOpacity, 0.1]
+  );
+  // Keep small shadow in impact section
+  const shadowOpacity = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experienceShadowOpacity, 0.15]
   );
 
   return (

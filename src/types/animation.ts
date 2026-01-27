@@ -103,6 +103,7 @@ export type AnimationControllerReturn = {
 
   // Manual control
   setMaxContentScroll: (maxScroll: number) => void;
+  setContentScrollOffset: (offset: number) => void;
 };
 
 /**

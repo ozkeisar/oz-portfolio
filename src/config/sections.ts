@@ -5,7 +5,7 @@ import type { SectionConfig, SectionId } from '../types/animation';
  */
 export const FPS = 30;
 export const INTRO_DURATION_FRAMES = 110; // ~3.7 seconds at 30fps
-export const BUFFER_DURATION_MS = 400; // Buffer after animation completes
+export const BUFFER_DURATION_MS = 200; // Buffer after animation completes
 
 /**
  * Typewriter timing
@@ -50,10 +50,10 @@ export const SECTIONS: SectionConfig[] = [
   },
   {
     id: 'impact',
-    enterDuration: 90,
+    enterDuration: 210, // 7 seconds for full SVG + number animation sequence (6 items)
     exitDuration: 45,
     exitDirection: 'right',
-    hasOverflowContent: false,
+    hasOverflowContent: false, // Animation-based, not scroll-driven
   },
   {
     id: 'skills',
