@@ -57,10 +57,14 @@ export const SECTIONS: SectionConfig[] = [
   },
   {
     id: 'skills',
-    enterDuration: 90,
+    // enterDuration needs to support:
+    // - Forward from impact: 30 delay + image arrival (75) + 180 animation = 285 frames
+    // - Backward from contact: 30 delay + 180 animation = 210 frames
+    enterDuration: 285, // Max of forward and backward durations
+    reverseDuration: 90, // Reverse animation when going backward
     exitDuration: 45,
     exitDirection: 'left',
-    hasOverflowContent: true,
+    hasOverflowContent: false, // Animation-based, no scroll-driven content
   },
   {
     id: 'contact',

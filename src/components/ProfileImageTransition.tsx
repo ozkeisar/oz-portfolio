@@ -19,6 +19,10 @@ const EXPERIENCE_TRANSITION_DURATION = 30; // Frames for image to move to experi
 const IMPACT_TRANSITION_DELAY = 10; // Small delay to sync with experience exit start
 const IMPACT_TRANSITION_DURATION = 20; // Frames for image to move back to experience (fast)
 
+// Timing constants for skills transition
+const SKILLS_TRANSITION_DELAY = 30; // Wait for impact exit animation to start
+const SKILLS_TRANSITION_DURATION = 45; // Frames for image to move to skills center (smooth)
+
 /**
  * Profile image that starts inside the "O" letter and transitions
  * through sections as the user scrolls.
@@ -42,6 +46,7 @@ export function ProfileImageTransition() {
   const summaryVisibility = useSectionVisibility('summary');
   const experienceVisibility = useSectionVisibility('experience');
   const impactVisibility = useSectionVisibility('impact');
+  const skillsVisibility = useSectionVisibility('skills');
 
   // Image appearance in the O (after title animation completes during intro)
   const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
@@ -62,6 +67,9 @@ export function ProfileImageTransition() {
   const isTransitioningToImpact = experienceVisibility.isExiting && direction === 'forward';
   const isTransitioningFromImpact =
     impactVisibility.isReversing || (impactVisibility.isExiting && direction === 'backward');
+  const isTransitioningToSkills = impactVisibility.isExiting && direction === 'forward';
+  const isTransitioningFromSkills =
+    skillsVisibility.isReversing || (skillsVisibility.isExiting && direction === 'backward');
 
   // Hide when not on any relevant section
   if (
@@ -69,10 +77,13 @@ export function ProfileImageTransition() {
     !summaryVisibility.isVisible &&
     !experienceVisibility.isVisible &&
     !impactVisibility.isVisible &&
+    !skillsVisibility.isVisible &&
     !isTransitioningToExperience &&
     !isTransitioningFromExperience &&
     !isTransitioningToImpact &&
-    !isTransitioningFromImpact
+    !isTransitioningFromImpact &&
+    !isTransitioningToSkills &&
+    !isTransitioningFromSkills
   ) {
     return null;
   }
@@ -335,6 +346,28 @@ export function ProfileImageTransition() {
   const impactY = isMobile ? impactMobileY : impactDesktopY;
 
   // ===========================================
+  // Skills section position calculations
+  // ===========================================
+  // Image moves to exact center of the viewport
+  const isTablet = viewport.width >= 768 && viewport.width < 1024;
+
+  // Network size for calculating image size
+  const skillsHorizontalPadding = responsiveSpacing(viewport.width, 24, 80);
+  const skillsVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
+  const networkSize = Math.min(
+    viewport.width - skillsHorizontalPadding * 2,
+    viewport.height - skillsVerticalPadding * 2 - 100,
+    isMobile ? 350 : isTablet ? 500 : 600
+  );
+
+  // Center of the viewport (exact middle of screen)
+  const skillsCenterX = viewport.width / 2;
+  const skillsCenterY = viewport.height / 2;
+
+  // Size of image when at center of skills network (larger, prominent)
+  const skillsImageSize = isMobile ? 60 : networkSize * 0.12;
+
+  // ===========================================
   // Calculate experience transition progress
   // ===========================================
 
@@ -366,8 +399,17 @@ export function ProfileImageTransition() {
   } else if (experienceVisibility.isActive) {
     // On experience section (not transitioning)
     experienceTransitionProgress = 1;
-  } else if (isTransitioningToImpact || impactVisibility.isEntering || impactVisibility.isActive || impactVisibility.isCurrent) {
-    // Experience exiting forward to Impact, or on Impact section (including buffering) - stay at experience position
+  } else if (
+    isTransitioningToImpact ||
+    impactVisibility.isEntering ||
+    impactVisibility.isActive ||
+    impactVisibility.isCurrent ||
+    isTransitioningToSkills ||
+    skillsVisibility.isEntering ||
+    skillsVisibility.isActive ||
+    skillsVisibility.isCurrent
+  ) {
+    // Experience exiting forward to Impact/Skills, or on Impact/Skills section - stay at experience position
     experienceTransitionProgress = 1;
   } else if (isTransitioningFromExperience) {
     // Experience reversing back to summary - move first, then text writes
@@ -414,6 +456,53 @@ export function ProfileImageTransition() {
   } else if (isTransitioningFromImpact) {
     // Impact reversing back to experience - move first, then experience writes
     impactTransitionProgress = interpolate(sequenceFrame, [0, IMPACT_TRANSITION_DURATION], [1, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+  } else if (
+    isTransitioningToSkills ||
+    skillsVisibility.isEntering ||
+    skillsVisibility.isActive ||
+    skillsVisibility.isCurrent
+  ) {
+    // Impact exiting forward to Skills, or on Skills section - stay at impact position
+    impactTransitionProgress = 1;
+  }
+
+  // ===========================================
+  // Calculate skills transition progress
+  // ===========================================
+
+  // Transition from impact → skills (0 = impact position, 1 = skills center position)
+  let skillsTransitionProgress = 0;
+
+  if (isTransitioningToSkills) {
+    // Impact exiting forward to skills - WAIT for impact exit animation, then move to center
+    const delayedFrame = Math.max(0, sequenceFrame - SKILLS_TRANSITION_DELAY);
+    skillsTransitionProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 14, stiffness: 60 }, // Slower, smoother transition to center
+    });
+  } else if (skillsVisibility.isEntering) {
+    if (skillsVisibility.isEnteringBackward) {
+      // Entering backward from later section - jump immediately
+      skillsTransitionProgress = 1;
+    } else {
+      // Entering forward from impact - continue animation with same spring timing
+      const delayedFrame = Math.max(0, sequenceFrame - SKILLS_TRANSITION_DELAY);
+      skillsTransitionProgress = spring({
+        frame: delayedFrame,
+        fps: FPS,
+        config: { damping: 14, stiffness: 60 },
+      });
+    }
+  } else if (skillsVisibility.isActive || skillsVisibility.isCurrent) {
+    // On skills section (active or buffering)
+    skillsTransitionProgress = 1;
+  } else if (isTransitioningFromSkills) {
+    // Skills reversing back to impact - move first
+    skillsTransitionProgress = interpolate(sequenceFrame, [0, SKILLS_TRANSITION_DURATION], [1, 0], {
       extrapolateLeft: 'clamp',
       extrapolateRight: 'clamp',
     });
@@ -524,18 +613,40 @@ export function ProfileImageTransition() {
     [summaryScrolledHeight, experienceImageSize]
   );
 
-  // Final position: interpolate from experience → impact
-  const currentX = interpolate(impactTransitionProgress, [0, 1], [experiencePositionX, impactX]);
-  const currentY = interpolate(impactTransitionProgress, [0, 1], [experiencePositionY, impactY]);
-  const currentWidth = interpolate(
+  // Intermediate position: interpolate from experience → impact
+  const impactPositionX = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experiencePositionX, impactX]
+  );
+  const impactPositionY = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experiencePositionY, impactY]
+  );
+  const impactPositionWidth = interpolate(
     impactTransitionProgress,
     [0, 1],
     [experiencePositionWidth, impactImageSize]
   );
-  const currentHeight = interpolate(
+  const impactPositionHeight = interpolate(
     impactTransitionProgress,
     [0, 1],
     [experiencePositionHeight, impactImageSize]
+  );
+
+  // Final position: interpolate from impact → skills center
+  const currentX = interpolate(skillsTransitionProgress, [0, 1], [impactPositionX, skillsCenterX]);
+  const currentY = interpolate(skillsTransitionProgress, [0, 1], [impactPositionY, skillsCenterY]);
+  const currentWidth = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactPositionWidth, skillsImageSize]
+  );
+  const currentHeight = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactPositionHeight, skillsImageSize]
   );
 
   // Opacity: fade in during appearance, stay visible during transitions
@@ -559,7 +670,13 @@ export function ProfileImageTransition() {
     [summaryBorderPadding, 2]
   );
   // Keep small border in impact section
-  const borderPadding = interpolate(impactTransitionProgress, [0, 1], [experienceBorderPadding, 2]);
+  const impactBorderPadding = interpolate(
+    impactTransitionProgress,
+    [0, 1],
+    [experienceBorderPadding, 2]
+  );
+  // Grow border when at skills center (more prominent)
+  const borderPadding = interpolate(skillsTransitionProgress, [0, 1], [impactBorderPadding, 4]);
 
   // Subtle shadow (reduces when scrolled/in timeline)
   const baseShadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
@@ -576,11 +693,13 @@ export function ProfileImageTransition() {
     [summaryShadowOpacity, 0.1]
   );
   // Keep small shadow in impact section
-  const shadowOpacity = interpolate(
+  const impactShadowOpacity = interpolate(
     impactTransitionProgress,
     [0, 1],
     [experienceShadowOpacity, 0.15]
   );
+  // Add glow/shadow when at skills center (prominent center node)
+  const shadowOpacity = interpolate(skillsTransitionProgress, [0, 1], [impactShadowOpacity, 0.3]);
 
   return (
     <div
