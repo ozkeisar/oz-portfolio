@@ -72,10 +72,40 @@ export function animationReducer(
         return state;
       }
 
+      // Skip EXITING state and go directly to TRANSITIONING
+      // This ensures a single animation phase where:
+      // - Previous section plays its exit animation (backward-typewriter)
+      // - Current section waits, then plays its entrance animation
+      // Using separate EXITING then TRANSITIONING would reset sequenceFrame mid-animation
+
+      if (action.direction === 'backward') {
+        const prevSection = Math.max(state.currentSection - 1, 0);
+        if (prevSection === state.currentSection) {
+          // At first section, can't go back
+          return state;
+        }
+        return {
+          ...state,
+          state: 'TRANSITIONING',
+          previousSection: state.currentSection,
+          currentSection: prevSection,
+          direction: 'backward',
+          sequenceFrame: 0,
+        };
+      }
+
+      // Forward direction
+      const nextSection = Math.min(state.currentSection + 1, TOTAL_SECTIONS - 1);
+      if (nextSection === state.currentSection) {
+        // At last section, can't go forward
+        return state;
+      }
       return {
         ...state,
-        state: 'EXITING',
-        direction: action.direction,
+        state: 'TRANSITIONING',
+        previousSection: state.currentSection,
+        currentSection: nextSection,
+        direction: 'forward',
         sequenceFrame: 0,
       };
     }
@@ -106,13 +136,15 @@ export function animationReducer(
         const sectionConfig = SECTIONS[state.currentSection];
 
         // If section has overflow content, go to CONTENT_SCROLL
-        // Otherwise, go to BUFFERING then IDLE
-        if (sectionConfig.hasOverflowContent && state.maxContentScroll > 0) {
+        // The section will measure itself and set maxContentScroll when active
+        // If no overflow, first scroll will trigger exit immediately
+        if (sectionConfig.hasOverflowContent) {
           return {
             ...state,
             state: 'CONTENT_SCROLL',
-            // If coming from below (backward), start at bottom of content
-            contentScrollOffset: state.direction === 'backward' ? state.maxContentScroll : 0,
+            // Always start at top - each section has its own scroll range
+            // The previous section's contentScrollOffset doesn't apply to this section
+            contentScrollOffset: 0,
           };
         }
 

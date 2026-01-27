@@ -28,7 +28,10 @@ export const SECTIONS: SectionConfig[] = [
   {
     id: 'summary',
     // OLD SLOW ENTER: was 660 frames (~22s) for full typewriter animation
-    enterDuration: 125, // 35 frame delay + 90 frame animation (~4s total)
+    // enterDuration needs to support both:
+    // - Forward from hero: 35 delay + 90 animation = 125 frames
+    // - Backward from experience: 60 delay (wait for exp reverse) + 90 animation = 150 frames
+    enterDuration: 150, // Max of forward and backward durations
     reverseDuration: 90, // ~3s compressed reverse (text deletion) when going backward
     exitDuration: 45,
     exitDirection: 'right',
@@ -36,10 +39,14 @@ export const SECTIONS: SectionConfig[] = [
   },
   {
     id: 'experience',
-    enterDuration: 120, // Longer for timeline
+    // enterDuration needs to support:
+    // - Forward from summary: 110 delay (wait for text deletion) + 90 animation = 200 frames
+    // - Backward from later section: 90 animation (no delay)
+    enterDuration: 200, // Max of forward and backward durations
+    reverseDuration: 90, // Reverse animation when going backward
     exitDuration: 45,
     exitDirection: 'left',
-    hasOverflowContent: true,
+    hasOverflowContent: true, // Enables scroll-driven timeline
   },
   {
     id: 'impact',

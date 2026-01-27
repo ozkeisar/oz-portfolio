@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { FPS, TYPEWRITER_CHAR_DELAY } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { calculateExitAnimation } from '../../hooks/useExitAnimation';
@@ -66,13 +67,79 @@ const SUMMARY_ENTER_DURATION = 660; // Full animation duration (for effectiveFra
 const SUMMARY_FAST_ENTER_DURATION = 90; // ~3 seconds fast enter (same speed as exit)
 const SUMMARY_REVERSE_DURATION = 90; // ~3 seconds to delete all text
 const SUMMARY_ENTER_DELAY = 35; // Delay before starting enter animation (let hero exit finish)
+const BACKWARD_FROM_EXPERIENCE_DELAY = 60; // Wait for experience reverse animation to complete
 
 // OLD SLOW ENTER: To restore slow typewriter, change SUMMARY_FAST_ENTER_DURATION to 660
 // and set effectiveFrame = sequenceFrame for forward direction (non-reversing)
 
 export function SummarySection() {
-  const { sequenceFrame, direction, viewport } = useAnimationContext();
-  const { isVisible, isExiting, isReversing, isEntering } = useSectionVisibility('summary');
+  const {
+    sequenceFrame,
+    direction,
+    viewport,
+    contentScrollOffset,
+    setMaxContentScroll,
+    state,
+    previousSection,
+  } = useAnimationContext();
+  const { isVisible, isExiting, isReversing, isEntering, isActive, isEnteringBackward } =
+    useSectionVisibility('summary');
+
+  // Detect if we're entering backward from Experience (index 2)
+  const isEnteringFromExperience = isEnteringBackward && previousSection === 2;
+
+  // Ref to measure content height
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Responsive breakpoints (defined early for use in useEffect)
+  const isMobile = viewport.width < 768;
+
+  // Photo size (must match ProfileImageTransition)
+  const photoSize = isMobile
+    ? responsiveFontSize(viewport.width, 80, 100)
+    : responsiveFontSize(viewport.width, 160, 200);
+
+  // Calculate available height for content
+  // Mobile: viewport minus image area at top
+  // Desktop: viewport minus vertical padding (content is centered)
+  const verticalPaddingDesktop = responsiveSpacing(viewport.width, 20, 40) * 2; // top + bottom
+  const mobileImageAreaHeight = viewport.height * 0.12 + photoSize + 24;
+  const availableHeight = isMobile
+    ? viewport.height - mobileImageAreaHeight - 40 // 40px bottom padding
+    : viewport.height - verticalPaddingDesktop - 40; // Account for padding and some margin
+
+  // Measure content and set maxContentScroll when in CONTENT_SCROLL state
+  // At this point the entrance animation is complete and all text is visible
+  useEffect(() => {
+    // Only measure when active (CONTENT_SCROLL or IDLE) - animation is complete, all text visible
+    if (!isActive || !contentRef.current) return;
+
+    // Small delay to ensure DOM is fully updated after animation
+    const timeoutId = setTimeout(() => {
+      if (!contentRef.current) return;
+      const contentHeight = contentRef.current.scrollHeight;
+      const overflow = Math.max(0, contentHeight - availableHeight);
+
+      // Only enable content scroll if there's significant overflow (more than 20px)
+      if (overflow > 20) {
+        // Add extra scroll room at bottom for better readability
+        // Less on mobile to prevent header from scrolling off screen
+        const extraScrollRoom = isMobile ? overflow * 0.1 : availableHeight * 0.25;
+        setMaxContentScroll(overflow + extraScrollRoom);
+      } else {
+        setMaxContentScroll(0);
+      }
+    }, 50);
+
+    return () => clearTimeout(timeoutId);
+  }, [isActive, availableHeight, setMaxContentScroll, isMobile]);
+
+  // Reset scroll when section is no longer visible
+  useEffect(() => {
+    if (!isVisible) {
+      setMaxContentScroll(0);
+    }
+  }, [isVisible, setMaxContentScroll]);
 
   // Don't render if not visible
   if (!isVisible) {
@@ -82,14 +149,30 @@ export function SummarySection() {
   // Calculate effectiveFrame - compress animation for both fast enter and reverse exit
   // Forward (entering): sequenceFrame 0→90 maps to effectiveFrame 0→660 (fast forward) with delay
   // Backward (reversing): sequenceFrame 0→90 maps to effectiveFrame 660→0 (fast reverse)
+  // Forward (exiting to experience): sequenceFrame 0→90 maps to effectiveFrame 660→0 (backward typewriter)
   let effectiveFrame: number;
-  if (isReversing) {
-    // Reverse: 660 → 0
-    effectiveFrame = Math.max(0, SUMMARY_ENTER_DURATION * (1 - sequenceFrame / SUMMARY_REVERSE_DURATION));
+  const isExitingForward = isExiting && direction === 'forward';
+
+  if (isReversing || isExitingForward) {
+    // Reverse/Exit: 660 → 0 (backward typewriter - text deletes)
+    effectiveFrame = Math.max(
+      0,
+      SUMMARY_ENTER_DURATION * (1 - sequenceFrame / SUMMARY_REVERSE_DURATION)
+    );
+  } else if (isEnteringFromExperience) {
+    // Entering backward from Experience: wait for experience reverse animation to complete
+    const delayedFrame = Math.max(0, sequenceFrame - BACKWARD_FROM_EXPERIENCE_DELAY);
+    effectiveFrame = Math.min(
+      SUMMARY_ENTER_DURATION,
+      SUMMARY_ENTER_DURATION * (delayedFrame / SUMMARY_FAST_ENTER_DURATION)
+    );
   } else if (isEntering) {
     // Fast forward enter with delay: wait for hero to exit first
     const delayedFrame = Math.max(0, sequenceFrame - SUMMARY_ENTER_DELAY);
-    effectiveFrame = Math.min(SUMMARY_ENTER_DURATION, SUMMARY_ENTER_DURATION * (delayedFrame / SUMMARY_FAST_ENTER_DURATION));
+    effectiveFrame = Math.min(
+      SUMMARY_ENTER_DURATION,
+      SUMMARY_ENTER_DURATION * (delayedFrame / SUMMARY_FAST_ENTER_DURATION)
+    );
   } else {
     // Idle/active state - show full animation
     effectiveFrame = SUMMARY_ENTER_DURATION;
@@ -120,22 +203,29 @@ export function SummarySection() {
   const textOpacity = interpolate(textContainerProgress, [0, 1], [0, 1]);
   const textY = interpolate(textContainerProgress, [0, 1], [30, 0]);
 
-  // Exit animation (slides to the right) - only for forward exit, not when reversing
-  const exitAnimation = isReversing
-    ? { opacity: 1, translateX: 0, scale: 1 }
-    : calculateExitAnimation({
-        direction: 'right',
-        duration: 45,
-        currentFrame: sequenceFrame,
-        isExiting,
-        scrollDirection: direction,
-      });
+  // Exit animation - different behavior based on direction
+  // - Backward (to hero): No slide, text reverses via effectiveFrame
+  // - Forward (to experience): No slide, no fade - only backward-typewriter via effectiveFrame
+  const exitAnimation =
+    isReversing || isExitingForward
+      ? {
+          // No slide, no fade - text deletion handles the exit visually
+          opacity: 1,
+          translateX: 0,
+          scale: 1,
+        }
+      : calculateExitAnimation({
+          direction: 'right',
+          duration: 45,
+          currentFrame: sequenceFrame,
+          isExiting,
+          scrollDirection: direction,
+        });
 
   // Typewriter timing - starts after entrance animations settle
   const typewriterStartFrame = 25;
 
-  // Responsive breakpoints
-  const isMobile = viewport.width < 768;
+  // Responsive breakpoints (isMobile and photoSize already defined above for useEffect)
   const isTablet = viewport.width >= 768 && viewport.width < 1024;
 
   // Responsive values - more nuanced for different screens
@@ -148,16 +238,42 @@ export function SummarySection() {
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
 
-  // Photo size matches ProfileImageTransition - smaller on mobile
-  const photoSize = isMobile
-    ? responsiveFontSize(viewport.width, 80, 100)
-    : responsiveFontSize(viewport.width, 160, 200);
-
   // Gap between photo and text
   const contentGap = responsiveSpacing(viewport.width, 24, 60);
 
   // Max width for text content - narrower on mobile
   const textMaxWidth = responsiveValue(viewport.width, 320, 500, 320, 1200);
+
+  // Content scroll offset - maintain position during exit animation to prevent jump
+  // Apply when: CONTENT_SCROLL, active (IDLE with overflow), or exiting forward
+  const scrollY =
+    state === 'CONTENT_SCROLL' || isActive || isExitingForward ? contentScrollOffset : 0;
+
+  // Mobile scroll progress for image spacer in section header (must match ProfileImageTransition)
+  // Using small threshold (20px) for fast but smooth transition before exit can start
+  const scrollMoveThreshold = 20;
+  const baseScrollProgress = interpolate(contentScrollOffset, [0, scrollMoveThreshold], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  let mobileScrollProgress = 0;
+  if (isMobile) {
+    if (state === 'CONTENT_SCROLL' || isExitingForward) {
+      // Maintain scroll progress during content scroll and exit animation
+      mobileScrollProgress = baseScrollProgress;
+    } else if (isReversing) {
+      // Animate spacer back to 0 during reverse transition
+      const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+      mobileScrollProgress = baseScrollProgress * (1 - reverseAnimationProgress);
+    }
+  }
+
+  const mobileScrolledImageSize = 32; // Must match ProfileImageTransition
+  const imageSpacerWidth = mobileScrollProgress * (mobileScrolledImageSize + 8); // image + gap
 
   // Tech stack items
   const techStack = [
@@ -184,30 +300,34 @@ export function SummarySection() {
         alignItems: 'center',
         paddingLeft: horizontalPadding,
         paddingRight: horizontalPadding,
-        paddingTop: isMobile ? viewport.height * 0.12 : verticalPadding,
+        paddingTop: isMobile ? viewport.height * 0.15 : verticalPadding,
         paddingBottom: verticalPadding,
         gap: contentGap,
         opacity: exitAnimation.opacity * entranceProgress,
         transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
+        overflow: 'hidden', // Clip content that scrolls above
       }}
     >
-      {/* Photo spacer - reserves space for ProfileImageTransition */}
-      <div
-        style={{
-          flexShrink: 0,
-          width: photoSize,
-          height: photoSize,
-          // On mobile, this sits at top; on desktop, left side
-        }}
-      />
+      {/* Photo spacer - reserves space for ProfileImageTransition (desktop only) */}
+      {!isMobile && (
+        <div
+          style={{
+            flexShrink: 0,
+            width: photoSize,
+            height: photoSize,
+          }}
+        />
+      )}
 
-      {/* Text content */}
+      {/* Text content - scrolls on small screens */}
       <div
+        ref={contentRef}
         style={{
           maxWidth: textMaxWidth,
           opacity: textOpacity,
-          transform: `translateY(${textY}px)`,
+          transform: `translateY(${textY - scrollY}px)`,
           textAlign: 'left',
+          transition: state === 'CONTENT_SCROLL' ? 'transform 0.1s ease-out' : undefined,
         }}
       >
         {/* Section number and title with line */}
@@ -221,6 +341,16 @@ export function SummarySection() {
             justifyContent: 'flex-start',
           }}
         >
+          {/* Dynamic spacer for profile image on mobile - expands as image moves in */}
+          {isMobile && imageSpacerWidth > 0 && (
+            <div
+              style={{
+                width: imageSpacerWidth,
+                height: mobileScrolledImageSize,
+                flexShrink: 0,
+              }}
+            />
+          )}
           <span
             style={{
               fontSize: numberSize + 10,

@@ -31,6 +31,11 @@ export function useAnimationController(): AnimationControllerReturn {
   const accumulatedScrollRef = useRef(0);
   const touchStartYRef = useRef<number | null>(null);
 
+  // Boundary scroll tracking - requires fresh scroll after hitting edge
+  const boundaryScrollRef = useRef(0);
+  const boundaryTimeoutRef = useRef<number | null>(null);
+  const atBoundaryRef = useRef<'top' | 'bottom' | null>(null);
+
   // ========================================
   // Intro Animation (plays on mount)
   // ========================================
@@ -179,13 +184,63 @@ export function useAnimationController(): AnimationControllerReturn {
         // Allow scroll within content bounds
         const newOffset = context.contentScrollOffset + e.deltaY * 0.5; // Dampen scroll speed
 
-        if (direction === 'forward' && newOffset >= context.maxContentScroll) {
-          // Reached bottom, trigger exit
-          dispatch({ type: 'START_EXIT', direction: 'forward' });
-        } else if (direction === 'backward' && newOffset <= 0) {
-          // Reached top, trigger exit backward
-          dispatch({ type: 'START_EXIT', direction: 'backward' });
+        // Check if we're at or hitting a boundary
+        const atBottom = newOffset >= context.maxContentScroll;
+        const atTop = newOffset <= 0;
+
+        // Clear boundary timeout on any scroll
+        if (boundaryTimeoutRef.current) {
+          clearTimeout(boundaryTimeoutRef.current);
+        }
+
+        if (atBottom && direction === 'forward') {
+          // At bottom, scrolling down
+          if (atBoundaryRef.current === 'bottom') {
+            // Already at boundary, accumulate scroll
+            boundaryScrollRef.current += Math.abs(e.deltaY);
+            if (boundaryScrollRef.current > SCROLL_THRESHOLD * 2) {
+              // Enough accumulated scroll, trigger exit
+              dispatch({ type: 'START_EXIT', direction: 'forward' });
+              boundaryScrollRef.current = 0;
+              atBoundaryRef.current = null;
+            }
+          } else {
+            // Just hit bottom boundary - start fresh accumulation
+            atBoundaryRef.current = 'bottom';
+            boundaryScrollRef.current = 0;
+          }
+          // Set timeout to reset boundary state after pause
+          boundaryTimeoutRef.current = window.setTimeout(() => {
+            boundaryScrollRef.current = 0;
+          }, 300);
+          // Clamp to max
+          dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: context.maxContentScroll });
+        } else if (atTop && direction === 'backward') {
+          // At top, scrolling up
+          if (atBoundaryRef.current === 'top') {
+            // Already at boundary, accumulate scroll
+            boundaryScrollRef.current += Math.abs(e.deltaY);
+            if (boundaryScrollRef.current > SCROLL_THRESHOLD * 2) {
+              // Enough accumulated scroll, trigger exit
+              dispatch({ type: 'START_EXIT', direction: 'backward' });
+              boundaryScrollRef.current = 0;
+              atBoundaryRef.current = null;
+            }
+          } else {
+            // Just hit top boundary - start fresh accumulation
+            atBoundaryRef.current = 'top';
+            boundaryScrollRef.current = 0;
+          }
+          // Set timeout to reset boundary state after pause
+          boundaryTimeoutRef.current = window.setTimeout(() => {
+            boundaryScrollRef.current = 0;
+          }, 300);
+          // Clamp to 0
+          dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: 0 });
         } else {
+          // Normal scrolling within bounds - clear boundary state
+          atBoundaryRef.current = null;
+          boundaryScrollRef.current = 0;
           dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: newOffset });
         }
       }
@@ -230,11 +285,50 @@ export function useAnimationController(): AnimationControllerReturn {
       } else if (context.state === 'CONTENT_SCROLL') {
         const newOffset = context.contentScrollOffset + deltaY * 0.3;
 
-        if (direction === 'forward' && newOffset >= context.maxContentScroll) {
-          dispatch({ type: 'START_EXIT', direction: 'forward' });
-        } else if (direction === 'backward' && newOffset <= 0) {
-          dispatch({ type: 'START_EXIT', direction: 'backward' });
+        // Check if we're at or hitting a boundary
+        const atBottom = newOffset >= context.maxContentScroll;
+        const atTop = newOffset <= 0;
+
+        // Clear boundary timeout on any touch move
+        if (boundaryTimeoutRef.current) {
+          clearTimeout(boundaryTimeoutRef.current);
+        }
+
+        if (atBottom && direction === 'forward') {
+          if (atBoundaryRef.current === 'bottom') {
+            boundaryScrollRef.current += Math.abs(deltaY);
+            if (boundaryScrollRef.current > SCROLL_THRESHOLD * 1.5) {
+              dispatch({ type: 'START_EXIT', direction: 'forward' });
+              boundaryScrollRef.current = 0;
+              atBoundaryRef.current = null;
+            }
+          } else {
+            atBoundaryRef.current = 'bottom';
+            boundaryScrollRef.current = 0;
+          }
+          boundaryTimeoutRef.current = window.setTimeout(() => {
+            boundaryScrollRef.current = 0;
+          }, 300);
+          dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: context.maxContentScroll });
+        } else if (atTop && direction === 'backward') {
+          if (atBoundaryRef.current === 'top') {
+            boundaryScrollRef.current += Math.abs(deltaY);
+            if (boundaryScrollRef.current > SCROLL_THRESHOLD * 1.5) {
+              dispatch({ type: 'START_EXIT', direction: 'backward' });
+              boundaryScrollRef.current = 0;
+              atBoundaryRef.current = null;
+            }
+          } else {
+            atBoundaryRef.current = 'top';
+            boundaryScrollRef.current = 0;
+          }
+          boundaryTimeoutRef.current = window.setTimeout(() => {
+            boundaryScrollRef.current = 0;
+          }, 300);
+          dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: 0 });
         } else {
+          atBoundaryRef.current = null;
+          boundaryScrollRef.current = 0;
           dispatch({ type: 'UPDATE_CONTENT_SCROLL', offset: newOffset });
         }
 

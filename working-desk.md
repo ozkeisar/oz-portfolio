@@ -27,3 +27,23 @@ so what do i mean? like we have the first animation in the start where the title
 so by that, is the user scroll up again, the animation Will play backward, again with not letting the user trigger the scroll mechanisem that effect frame up until the animation done playing + buffer. 
 
 is something not understanding to you? if so ask now.
+
+---
+
+
+great work, now we continuing to the next section, the Experiance, read openspec/project.md 
+as we transformd the summery section to accept the image component, and redesigned it all to be more muture and info including, read the src/assets/Oz-Keisar-Professional-Summary.md and lets recreate the Experiance section. 
+
+for that section we will want to make something really beutifull. first as we move to that section fro mthe summery, the image take place in the header animating the entery to the page -> first item in the timeline showing in the same manner the text in the summery section is written, fast and smooth. here the animation ends and the power gose to the user scroll frame tracking. 
+as the user scroll more Down, the first item time line text - are being "backward written" and stop with the item titel (like the job name or something like that) and then being shrinked and stack upward, while the next item being start "writing" the full paragraph and the time line indicatore sync with its progress. 
+when the user continue -> the next item also being "backward written" and shrink & push up to be stack below the first item. -> the next item start writtent. 
+
+all this IS being controlled by the user acroll and not auto paly animation like the entrence itself. 
+
+so first things that iportant to notced to them, no need for the fade out animation in the summery section, we have the "backward" writtening for the exit animation, and the image is contonuing to the next section. 
+
+we will start from scratch the Experiance section, delete the current component, and start again, do not use any matirial from there. 
+
+use the remotion skill for the planing and the animation, write that in the proposal as instruction for every read, to remaind you to read those skill again. 
+
+now create /openspec:proposal experiance-section for that change. 

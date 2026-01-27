@@ -1,24 +1,42 @@
 import ozPhoto from '../assets/oz-photo.webp';
+import { FPS } from '../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../context/AnimationContext';
+import { EXPERIENCE_ITEM_COUNT } from '../data/experienceData';
+import { getTimelineScrollState } from '../hooks/useTimelineScroll';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../hooks/useViewport';
-import { interpolate } from '../utils/animation';
+import { interpolate, spring } from '../utils/animation';
 import { colors, toRgbString } from '../utils/colors';
 
 // Timing constants for backward transition
 const IMAGE_BACKWARD_MOVE_DELAY = 80; // Image starts moving back after text is mostly deleted
 const IMAGE_MOVE_DURATION = 30; // Duration for image to move back to hero (faster to match hero fade-in)
 
+// Timing constants for experience transition
+const EXPERIENCE_TRANSITION_DELAY = 110; // Wait for summary text deletion before moving (~3.7s at 30fps)
+const EXPERIENCE_TRANSITION_DURATION = 30; // Frames for image to move to experience position
+
 /**
  * Profile image that starts inside the "O" letter and transitions
- * to the summary section as the user scrolls.
- * Has a permanent white background that travels with it.
+ * through sections as the user scrolls.
+ * - Hero: Inside the "O" letter
+ * - Summary: Left side on desktop, top on mobile
+ * - Experience: Fades out (experience section has its own content)
  *
  * Coordinates with SummarySection for proper positioning on both mobile and desktop.
  */
 export function ProfileImageTransition() {
-  const { introFrame, isIntroComplete, sequenceFrame, direction, viewport } = useAnimationContext();
+  const {
+    introFrame,
+    isIntroComplete,
+    sequenceFrame,
+    direction,
+    viewport,
+    contentScrollOffset,
+    state,
+  } = useAnimationContext();
   const heroVisibility = useSectionVisibility('hero');
   const summaryVisibility = useSectionVisibility('summary');
+  const experienceVisibility = useSectionVisibility('experience');
 
   // Image appearance in the O (after title animation completes during intro)
   const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
@@ -31,8 +49,20 @@ export function ProfileImageTransition() {
     return null;
   }
 
-  // Hide when neither hero nor summary is visible
-  if (!heroVisibility.isVisible && !summaryVisibility.isVisible) {
+  // Transition states
+  const isTransitioningToExperience = summaryVisibility.isExiting && direction === 'forward';
+  const isTransitioningFromExperience =
+    experienceVisibility.isReversing ||
+    (experienceVisibility.isExiting && direction === 'backward');
+
+  // Hide when not on any relevant section
+  if (
+    !heroVisibility.isVisible &&
+    !summaryVisibility.isVisible &&
+    !experienceVisibility.isVisible &&
+    !isTransitioningToExperience &&
+    !isTransitioningFromExperience
+  ) {
     return null;
   }
 
@@ -64,6 +94,9 @@ export function ProfileImageTransition() {
     transitionProgress = 1;
   } else if (summaryVisibility.isReversing) {
     // Summary is reversing (text deleting) - stay at summary position until image moves
+    transitionProgress = 1;
+  } else if (isTransitioningToExperience || isTransitioningFromExperience) {
+    // During summary→experience or experience→summary transition, stay at summary position
     transitionProgress = 1;
   }
 
@@ -113,13 +146,19 @@ export function ProfileImageTransition() {
   let summaryX: number;
   let summaryY: number;
 
-  if (isMobile) {
-    // Mobile: photo is at top of content, positioned higher on screen
-    // Position photo in upper portion of viewport
-    const topOffset = viewport.height * 0.12; // 12% from top
+  // Mobile layout calculations (must match SummarySection exactly)
+  const mobileTopPadding = viewport.height * 0.15; // Must match SummarySection paddingTop
+  const mobileScrolledSize = 32; // Small image next to section number
+  const titleSize = responsiveFontSize(viewport.width, 20, 32);
+  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const sectionNumberFontSize = numberSize + 10;
 
+  if (isMobile) {
+    // Mobile: photo centered above the text content
+    // Position so image bottom is above where text starts (mobileTopPadding)
+    const gapAboveText = 16; // gap between image bottom and text top
     summaryX = viewport.width / 2;
-    summaryY = topOffset + summaryPhotoSize / 2;
+    summaryY = mobileTopPadding - gapAboveText - summaryPhotoSize / 2;
   } else {
     // Desktop: photo on left side of centered row
     // Total content width = photoSize + gap + textWidth
@@ -130,37 +169,288 @@ export function ProfileImageTransition() {
     summaryY = viewport.height / 2;
   }
 
-  // Interpolate between positions
-  const currentX = interpolate(transitionProgress, [0, 1], [heroX, summaryX]);
-  const currentY = interpolate(transitionProgress, [0, 1], [heroY, summaryY]);
+  // Mobile scroll-based transition: move image into section number row
+  // Calculate text content position (centered div with maxWidth)
+  const textContentLeftEdge = (viewport.width - textMaxWidth) / 2;
 
-  // Interpolate from ellipse (O shape) to circle (summary)
-  const currentWidth = interpolate(transitionProgress, [0, 1], [oWidth, summaryPhotoSize]);
-  const currentHeight = interpolate(transitionProgress, [0, 1], [oHeight, summaryPhotoSize]);
+  // Position image at the LEFT of the section number row, inside the spacer
+  // Image sits at: textContentLeftEdge + imageSize/2 (for center positioning within spacer)
+  const mobileScrolledX = textContentLeftEdge + mobileScrolledSize / 2;
 
-  // Opacity: fade in during appearance, stay visible during transition
+  // Y position: align with section number row
+  // Section number row starts at: mobileTopPadding (top of text content on mobile)
+  // Center image vertically with the section number text
+  const sectionNumberCenterY = mobileTopPadding + sectionNumberFontSize / 2;
+  const mobileScrolledY = sectionNumberCenterY;
+
+  // ===========================================
+  // Experience section position calculations
+  // ===========================================
+  // Must match ExperienceSection layout exactly
+
+  // Experience layout constants (from ExperienceSection)
+  const expVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
+  const expContentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+
+  // Timeline rail dimensions (from TimelineRail)
+  const railWidth = 40;
+  const railHeight = Math.min(400, viewport.height * 0.5);
+  const timelineImageSize = 28; // Image size when in timeline
+
+  // ExperienceSection uses alignItems: 'center' with maxWidth: contentMaxWidth + 60
+  // This centers the content at viewport center
+  // Content left edge = (viewport.width - totalMaxWidth) / 2
+  const expTotalMaxWidth = expContentMaxWidth + (isMobile ? 0 : 60);
+  const expContentLeftEdge = (viewport.width - expTotalMaxWidth) / 2;
+
+  // Rail is the first flex child with width 40px, centered at left edge + 20
+  const expRailCenterX = expContentLeftEdge + railWidth / 2;
+
+  // Y position calculation:
+  // - verticalPadding (top of container)
+  // - + header height (section number row)
+  // - + header marginBottom
+  // - + progressY (position within rail)
+  const expHeaderMarginBottom = responsiveSpacing(viewport.width, 16, 24);
+  const expSectionNumberHeight =
+    (isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20)) + 10;
+  const expHeaderTotalHeight = expSectionNumberHeight + expHeaderMarginBottom;
+
+  // Timeline dots position (from TimelineRail)
+  const firstDotY = 20;
+  const lastDotY = railHeight - 20;
+
+  // Get scroll state for timeline position (same calculation as ExperienceSection)
+  const experienceScrollOffset =
+    experienceVisibility.isActive || state === 'CONTENT_SCROLL' ? contentScrollOffset : 0;
+  const expScrollState = getTimelineScrollState(experienceScrollOffset);
+  const progressY = interpolate(
+    expScrollState.currentItemIndex + expScrollState.localProgress,
+    [0, EXPERIENCE_ITEM_COUNT - 1],
+    [firstDotY, lastDotY]
+  );
+
+  // Desktop experience position: center of rail, following progress
+  // Add small offset to align with dot center (accounting for image size difference)
+  const expDesktopX = expRailCenterX;
+  const expDesktopY = expVerticalPadding + expHeaderTotalHeight + progressY + 8;
+
+  // Mobile experience position: in the Experience section header row
+  // Must match ExperienceSection's header layout exactly
+  const expMobileImageSize = 32; // Must match ExperienceSection's mobileImageSize
+
+  // X position: left edge of content area + image center
+  const expMobileContentLeftEdge = (viewport.width - expContentMaxWidth) / 2;
+  const expMobileX = expMobileContentLeftEdge + expMobileImageSize / 2;
+
+  // Y position: verticalPadding + center of header row
+  // The header row height on mobile is determined by the spacer (32px)
+  const expMobileRowHeight = expMobileImageSize; // Row height matches image size
+
+  // Account for header entrance animation on mobile
+  // The header has transform: translateY(headerY) where headerY goes 20 → 0
+  // We need to apply the same offset so the image follows the header
+  let expHeaderAnimationOffset = 0;
+  if (experienceVisibility.isEntering && !experienceVisibility.isEnteringBackward) {
+    // Calculate the same delayed entrance progress as ExperienceSection
+    const delayedFrame = Math.max(0, sequenceFrame - EXPERIENCE_TRANSITION_DELAY);
+    const entranceProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 14, stiffness: 80 },
+    });
+    // Header Y offset during entrance animation (20 → 0)
+    expHeaderAnimationOffset = interpolate(entranceProgress, [0, 1], [20, 0]);
+  }
+
+  const expMobileY = expVerticalPadding + expMobileRowHeight / 2 + expHeaderAnimationOffset;
+
+  const experienceX = isMobile ? expMobileX : expDesktopX;
+  const experienceY = isMobile ? expMobileY : expDesktopY;
+  const experienceImageSize = isMobile ? expMobileImageSize : timelineImageSize;
+
+  // ===========================================
+  // Calculate experience transition progress
+  // ===========================================
+
+  // Transition from summary → experience (0 = summary scrolled position, 1 = experience position)
+  let experienceTransitionProgress = 0;
+
+  if (isTransitioningToExperience) {
+    // Summary exiting forward to experience - WAIT for text deletion, then move
+    // Use same spring timing as Experience header/spacer for coordinated animation
+    const delayedFrame = Math.max(0, sequenceFrame - EXPERIENCE_TRANSITION_DELAY);
+    experienceTransitionProgress = spring({
+      frame: delayedFrame,
+      fps: FPS,
+      config: { damping: 14, stiffness: 80 },
+    });
+  } else if (experienceVisibility.isEntering) {
+    if (experienceVisibility.isEnteringBackward) {
+      // Entering backward from later section - jump immediately
+      experienceTransitionProgress = 1;
+    } else {
+      // Entering forward from summary - continue animation with same spring timing
+      const delayedFrame = Math.max(0, sequenceFrame - EXPERIENCE_TRANSITION_DELAY);
+      experienceTransitionProgress = spring({
+        frame: delayedFrame,
+        fps: FPS,
+        config: { damping: 14, stiffness: 80 },
+      });
+    }
+  } else if (experienceVisibility.isActive) {
+    // On experience section (not transitioning)
+    experienceTransitionProgress = 1;
+  } else if (isTransitioningFromExperience) {
+    // Experience reversing back to summary - move first, then text writes
+    experienceTransitionProgress = interpolate(
+      sequenceFrame,
+      [0, EXPERIENCE_TRANSITION_DURATION],
+      [1, 0],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+  }
+
+  // Calculate scroll progress for mobile (0 = summary position, 1 = scrolled position)
+  // Image should complete moving quickly so it's in place before exit animation
+  // Using a small threshold (20px) for fast but smooth transition
+  const scrollMoveThreshold = 20;
+
+  // Calculate base scroll progress from contentScrollOffset
+  const baseScrollProgress = interpolate(contentScrollOffset, [0, scrollMoveThreshold], [0, 1], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
+
+  let mobileScrollProgress = 0;
+  if (isMobile) {
+    if (state === 'CONTENT_SCROLL' && summaryVisibility.isCurrent) {
+      // Normal content scroll on summary - use scroll offset directly
+      mobileScrollProgress = baseScrollProgress;
+    } else if (summaryVisibility.isReversing) {
+      // Backward transition from summary to hero - animate scroll position back to 0
+      // contentScrollOffset is preserved, so we can use it
+      const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+      mobileScrollProgress = baseScrollProgress * (1 - reverseAnimationProgress);
+    } else if (isTransitioningToExperience) {
+      // When transitioning to experience, use actual scroll progress to prevent jump
+      // The image will animate from its current position to experience position
+      mobileScrollProgress = baseScrollProgress;
+    } else if (experienceVisibility.isActive || experienceVisibility.isEntering) {
+      // When on experience section, keep at fully scrolled position
+      mobileScrollProgress = 1;
+    } else if (isTransitioningFromExperience) {
+      // When coming back from experience, animate from scrolled position to main position
+      // Use the same timing as experienceTransitionProgress going 1 → 0
+      const reverseProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      });
+      mobileScrollProgress = 1 - reverseProgress; // Goes from 1 → 0
+    }
+    // In other states (IDLE, forward TRANSITIONING, etc.), mobileScrollProgress stays 0
+  }
+
+  // Base position from hero → summary transition
+  const baseX = interpolate(transitionProgress, [0, 1], [heroX, summaryX]);
+  const baseY = interpolate(transitionProgress, [0, 1], [heroY, summaryY]);
+  const baseWidth = interpolate(transitionProgress, [0, 1], [oWidth, summaryPhotoSize]);
+  const baseHeight = interpolate(transitionProgress, [0, 1], [oHeight, summaryPhotoSize]);
+
+  // Apply mobile scroll transition on top of base position
+  // The scrolled position also moves with content scroll (same as text translateY)
+  // During backward transition, animate scrollY back to 0 along with mobileScrollProgress
+  let scrollY = 0;
+  if (state === 'CONTENT_SCROLL' && summaryVisibility.isCurrent) {
+    scrollY = contentScrollOffset;
+  } else if (isTransitioningToExperience) {
+    // Maintain scroll position during exit to prevent vertical jump
+    scrollY = contentScrollOffset;
+  } else if (summaryVisibility.isReversing) {
+    // Animate scrollY back to 0 over the first 30 frames of reverse transition
+    const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    scrollY = contentScrollOffset * (1 - reverseAnimationProgress);
+  }
+
+  // Calculate summary scrolled position (before experience transition)
+  const summaryScrolledX = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseX, mobileScrolledX])
+    : baseX;
+  const summaryScrolledY = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseY, mobileScrolledY]) -
+      scrollY * mobileScrollProgress
+    : baseY;
+  const summaryScrolledWidth = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseWidth, mobileScrolledSize])
+    : baseWidth;
+  const summaryScrolledHeight = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseHeight, mobileScrolledSize])
+    : baseHeight;
+
+  // Final position: interpolate from summary scrolled → experience
+  // Experience position on desktop follows the timeline; on mobile stays in header
+  const currentX = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryScrolledX, experienceX]
+  );
+  const currentY = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryScrolledY, experienceY]
+  );
+  const currentWidth = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryScrolledWidth, experienceImageSize]
+  );
+  const currentHeight = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryScrolledHeight, experienceImageSize]
+  );
+
+  // Opacity: fade in during appearance, stay visible during transitions
   const opacity = isIntroComplete ? 1 : appearanceProgress;
 
-  // Exit opacity when summary section is exiting (forward only, not when reversing)
-  const exitOpacity =
-    summaryVisibility.isExiting && !summaryVisibility.isReversing && direction === 'forward'
-      ? interpolate(sequenceFrame, [0, 30], [1, 0], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-      : 1;
+  // Image no longer fades when transitioning to/from experience - it moves instead
+  const exitOpacity = 1;
 
-  // White border padding (grows during transition)
-  const borderPadding = interpolate(transitionProgress, [0, 0.5], [3, 6], {
+  // White border padding (grows during transition, shrinks when scrolled/in timeline)
+  const baseBorderPadding = interpolate(transitionProgress, [0, 0.5], [3, 6], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
+  const summaryBorderPadding = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseBorderPadding, 2])
+    : baseBorderPadding;
+  // Shrink border when in experience timeline
+  const borderPadding = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryBorderPadding, 2]
+  );
 
-  // Subtle shadow
-  const shadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
+  // Subtle shadow (reduces when scrolled/in timeline)
+  const baseShadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
+  const summaryShadowOpacity = isMobile
+    ? interpolate(mobileScrollProgress, [0, 1], [baseShadowOpacity, 0.15])
+    : baseShadowOpacity;
+  // Reduce shadow when in experience timeline
+  const shadowOpacity = interpolate(
+    experienceTransitionProgress,
+    [0, 1],
+    [summaryShadowOpacity, 0.1]
+  );
 
   return (
     <div
