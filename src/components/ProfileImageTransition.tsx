@@ -1,8 +1,12 @@
 import ozPhoto from '../assets/oz-photo.webp';
+import { useAnimationContext, useSectionVisibility } from '../context/AnimationContext';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../hooks/useViewport';
 import { interpolate } from '../utils/animation';
 import { colors, toRgbString } from '../utils/colors';
-import { FRAME_CONFIG, useScrollContext } from './ScrollController';
+
+// Timing constants for backward transition
+const IMAGE_BACKWARD_MOVE_DELAY = 80; // Image starts moving back after text is mostly deleted
+const IMAGE_MOVE_DURATION = 30; // Duration for image to move back to hero (faster to match hero fade-in)
 
 /**
  * Profile image that starts inside the "O" letter and transitions
@@ -12,31 +16,55 @@ import { FRAME_CONFIG, useScrollContext } from './ScrollController';
  * Coordinates with SummarySection for proper positioning on both mobile and desktop.
  */
 export function ProfileImageTransition() {
-  const { frame, viewport, entranceFrame, isEntranceComplete } = useScrollContext();
+  const { introFrame, isIntroComplete, sequenceFrame, direction, viewport } = useAnimationContext();
+  const heroVisibility = useSectionVisibility('hero');
+  const summaryVisibility = useSectionVisibility('summary');
 
-  // Calculate transition progress (hero -> summary)
-  const heroEnd = FRAME_CONFIG.hero.end;
-  const summaryMid = FRAME_CONFIG.summary.start + 50;
-
-  const transitionProgress = interpolate(frame, [heroEnd - 30, summaryMid], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  // Image appearance in the O (after title animation completes)
-  const appearanceProgress = interpolate(entranceFrame, [85, 100], [0, 1], {
+  // Image appearance in the O (after title animation completes during intro)
+  const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   // Don't render until animation starts appearing
-  if (appearanceProgress <= 0 && !isEntranceComplete) {
+  if (appearanceProgress <= 0 && !isIntroComplete) {
     return null;
   }
 
-  // Hide after summary section
-  if (frame > FRAME_CONFIG.summary.end + 50) {
+  // Hide when neither hero nor summary is visible
+  if (!heroVisibility.isVisible && !summaryVisibility.isVisible) {
     return null;
+  }
+
+  // Calculate transition progress: 0 = hero position, 1 = summary position
+  // Transition when hero is exiting or we're on summary section
+  let transitionProgress = 0;
+
+  if (heroVisibility.isEnteringBackward) {
+    // Going backward from summary to hero
+    // Wait until text deletion is mostly done, then move image back
+    transitionProgress = interpolate(
+      sequenceFrame,
+      [IMAGE_BACKWARD_MOVE_DELAY, IMAGE_BACKWARD_MOVE_DELAY + IMAGE_MOVE_DURATION],
+      [1, 0],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+  } else if (heroVisibility.isExiting && direction === 'forward') {
+    // Hero is exiting forward - animate image to summary position
+    transitionProgress = interpolate(sequenceFrame, [0, 45], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+  } else if (
+    summaryVisibility.isCurrent &&
+    !summaryVisibility.isExiting &&
+    !summaryVisibility.isReversing
+  ) {
+    // On summary section (not exiting or reversing) - stay at summary position
+    transitionProgress = 1;
+  } else if (summaryVisibility.isReversing) {
+    // Summary is reversing (text deleting) - stay at summary position until image moves
+    transitionProgress = 1;
   }
 
   // Responsive breakpoints (must match SummarySection)
@@ -111,18 +139,16 @@ export function ProfileImageTransition() {
   const currentHeight = interpolate(transitionProgress, [0, 1], [oHeight, summaryPhotoSize]);
 
   // Opacity: fade in during appearance, stay visible during transition
-  const opacity = isEntranceComplete ? 1 : appearanceProgress;
+  const opacity = isIntroComplete ? 1 : appearanceProgress;
 
-  // Exit opacity for summary section
-  const exitOpacity = interpolate(
-    frame,
-    [FRAME_CONFIG.summary.end - 30, FRAME_CONFIG.summary.end + 20],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    }
-  );
+  // Exit opacity when summary section is exiting (forward only, not when reversing)
+  const exitOpacity =
+    summaryVisibility.isExiting && !summaryVisibility.isReversing && direction === 'forward'
+      ? interpolate(sequenceFrame, [0, 30], [1, 0], {
+          extrapolateLeft: 'clamp',
+          extrapolateRight: 'clamp',
+        })
+      : 1;
 
   // White border padding (grows during transition)
   const borderPadding = interpolate(transitionProgress, [0, 0.5], [3, 6], {

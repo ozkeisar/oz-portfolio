@@ -1,18 +1,18 @@
 import { AnimationCanvas } from './components/AnimationCanvas';
 import { ProfileImageTransition } from './components/ProfileImageTransition';
-import { ScrollController } from './components/ScrollController';
 import { ContactSection } from './components/sections/ContactSection';
 import { ExperienceSection } from './components/sections/ExperienceSection';
 import { HeroSection } from './components/sections/HeroSection';
 import { ImpactSection } from './components/sections/ImpactSection';
 import { SkillsSection } from './components/sections/SkillsSection';
 import { SummarySection } from './components/sections/SummarySection';
+import { AnimationProvider } from './context/AnimationContext';
 import './App.css';
 
 function App() {
   return (
-    <AnimationCanvas backgroundColor="#0a1628">
-      <ScrollController>
+    <AnimationProvider>
+      <AnimationCanvas backgroundColor="#0a1628">
         <HeroSection />
         <SummarySection />
         <ExperienceSection />
@@ -20,8 +20,8 @@ function App() {
         <SkillsSection />
         <ContactSection />
         <ProfileImageTransition />
-      </ScrollController>
-    </AnimationCanvas>
+      </AnimationCanvas>
+    </AnimationProvider>
   );
 }
 

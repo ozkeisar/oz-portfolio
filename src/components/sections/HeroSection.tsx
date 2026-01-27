@@ -1,23 +1,33 @@
+import { FPS } from '../../config/sections';
+import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbString } from '../../utils/colors';
-import { FPS, getSectionProgress, useScrollContext } from '../ScrollController';
 import { OzKeisarText } from '../text/OzKeisarText';
 
-export function HeroSection() {
-  const { frame, viewport, entranceFrame, isEntranceComplete } = useScrollContext();
-  const sectionProgress = getSectionProgress(frame, 'hero');
+// Timing constants for backward transition
+const HERO_BACKWARD_ENTRANCE_DELAY = 80; // Hero starts entering after summary text is mostly deleted (90 frame reverse)
 
-  // Calculate text drawing progress (0-1) based on entrance frame
+export function HeroSection() {
+  const { introFrame, isIntroComplete, sequenceFrame, viewport } = useAnimationContext();
+
+  const { isVisible, isCurrent, isExiting, isEnteringBackward } = useSectionVisibility('hero');
+
+  // Don't render if not visible
+  if (!isVisible && isIntroComplete) {
+    return null;
+  }
+
+  // Calculate text drawing progress (0-1) based on intro frame
   // Title draws from frame 0 to 90 (3 seconds)
-  const titleDrawProgress = interpolate(entranceFrame, [0, 90], [0, 1], {
+  const titleDrawProgress = interpolate(introFrame, [0, 90], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   // Subtitle spring animation (appears as title nears completion)
   const subtitleProgress = spring({
-    frame: entranceFrame - 75,
+    frame: introFrame - 75,
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
@@ -26,7 +36,7 @@ export function HeroSection() {
 
   // Accent line animation (appears with subtitle)
   const accentLineProgress = spring({
-    frame: entranceFrame - 85,
+    frame: introFrame - 85,
     fps: FPS,
     config: { damping: 14, stiffness: 120 },
   });
@@ -35,34 +45,53 @@ export function HeroSection() {
 
   // Scroll indicator animation (appears right after)
   const scrollIndicatorProgress = spring({
-    frame: entranceFrame - 100,
+    frame: introFrame - 100,
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
   const scrollIndicatorOpacity = interpolate(scrollIndicatorProgress, [0, 1], [0, 1]);
   const scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
 
-  // Exit animation (fade out as we scroll into summary) - only after entrance complete
-  const exitOpacity = isEntranceComplete
-    ? interpolate(sectionProgress, [0.3, 0.8], [1, 0], {
+  // Exit animation - fade out upward (not using calculateExitAnimation)
+  const exitOpacity = isExiting
+    ? interpolate(sequenceFrame, [0, 30], [1, 0], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
     : 1;
-  const exitY = isEntranceComplete
-    ? interpolate(sectionProgress, [0.3, 0.8], [0, -50], {
+  const exitTranslateY = isExiting
+    ? interpolate(sequenceFrame, [0, 35], [0, -50], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
     : 0;
+  const exitAnimation = isEnteringBackward
+    ? { opacity: 1, translateY: 0 }
+    : { opacity: exitOpacity, translateY: exitTranslateY };
+
+  // Backward entrance animation - fade in after summary text deletion
+  // Duration matches image movement (30 frames) for sync
+  const backwardEntranceOpacity = isEnteringBackward
+    ? interpolate(
+        sequenceFrame,
+        [HERO_BACKWARD_ENTRANCE_DELAY, HERO_BACKWARD_ENTRANCE_DELAY + 30],
+        [0, 1],
+        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+      )
+    : 1;
 
   // Responsive sizes
   const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
   const padding = responsiveSpacing(viewport.width, 20, 40);
 
-  // Bounce animation for scroll indicator
-  const bounceFrame = isEntranceComplete ? entranceFrame + frame : entranceFrame;
-  const bounceOffset = scrollIndicatorProgress > 0.5 ? Math.sin(bounceFrame * 0.1) * 8 : 0;
+  // Bounce animation for scroll indicator (only when visible and not exiting)
+  const bounceOffset =
+    scrollIndicatorProgress > 0.5 && isCurrent && !isExiting && !isEnteringBackward
+      ? Math.sin((introFrame + sequenceFrame) * 0.1) * 8
+      : 0;
+
+  // Combined opacity: exit animation * backward entrance
+  const finalOpacity = exitAnimation.opacity * backwardEntranceOpacity;
 
   return (
     <div
@@ -74,8 +103,8 @@ export function HeroSection() {
         justifyContent: 'center',
         alignItems: 'center',
         padding,
-        opacity: exitOpacity,
-        transform: `translateY(${exitY}px)`,
+        opacity: finalOpacity,
+        transform: `translateY(${exitAnimation.translateY}px)`,
       }}
     >
       {/* Main title - SVG with handwriting animation */}
@@ -123,7 +152,7 @@ export function HeroSection() {
           flexDirection: 'column',
           alignItems: 'center',
           gap: 8,
-          opacity: scrollIndicatorOpacity * exitOpacity,
+          opacity: scrollIndicatorOpacity * exitAnimation.opacity,
           transform: `translateY(${scrollIndicatorY + bounceOffset}px)`,
         }}
       >

@@ -1,7 +1,9 @@
+import { FPS } from '../../config/sections';
+import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
+import { calculateExitAnimation } from '../../hooks/useExitAnimation';
 import { responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
-import { FPS, FRAME_CONFIG, getSectionProgress, useScrollContext } from '../ScrollController';
 
 type Experience = {
   title: string;
@@ -32,19 +34,17 @@ const experiences: Experience[] = [
 ];
 
 export function ExperienceSection() {
-  const { frame, viewport } = useScrollContext();
-  const { start, end } = FRAME_CONFIG.experience;
-  const sectionProgress = getSectionProgress(frame, 'experience');
+  const { sequenceFrame, direction, viewport } = useAnimationContext();
+  const { isVisible, isExiting } = useSectionVisibility('experience');
 
-  // Only render when near or in section
-  if (frame < start - 30 || frame > end + 50) {
+  // Don't render if not visible
+  if (!isVisible) {
     return null;
   }
 
   // Section entrance
-  const entranceFrame = Math.max(0, frame - start);
   const entranceProgress = spring({
-    frame: entranceFrame,
+    frame: sequenceFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 80 },
   });
@@ -53,12 +53,17 @@ export function ExperienceSection() {
   const titleOpacity = interpolate(entranceProgress, [0, 1], [0, 1]);
   const titleY = interpolate(entranceProgress, [0, 1], [30, 0]);
 
-  // Exit animation
-  const exitOpacity = interpolate(sectionProgress, [0.85, 1], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Exit animation (slides left - alternating from summary which went right)
+  const exitAnimation = calculateExitAnimation({
+    direction: 'left',
+    duration: 45,
+    currentFrame: sequenceFrame,
+    isExiting,
+    scrollDirection: direction,
   });
-  const exitY = interpolate(sectionProgress, [0.85, 1], [0, -40], {
+
+  // Timeline progress based on sequence frame
+  const lineProgress = interpolate(sequenceFrame, [30, 90], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
@@ -68,12 +73,6 @@ export function ExperienceSection() {
   const cardTitleSize = responsiveFontSize(viewport.width, 18, 24);
   const bodySize = responsiveFontSize(viewport.width, 14, 16);
   const padding = responsiveSpacing(viewport.width, 20, 60);
-
-  // Timeline line progress
-  const lineProgress = interpolate(sectionProgress, [0.1, 0.7], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
 
   return (
     <div
@@ -85,8 +84,8 @@ export function ExperienceSection() {
         justifyContent: 'center',
         alignItems: 'center',
         padding,
-        opacity: exitOpacity * entranceProgress,
-        transform: `translateY(${exitY}px)`,
+        opacity: exitAnimation.opacity * entranceProgress,
+        transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
       }}
     >
       {/* Section title */}
@@ -141,7 +140,7 @@ export function ExperienceSection() {
         {/* Experience cards */}
         {experiences.map((exp, index) => {
           // Staggered entrance for each card
-          const cardFrame = Math.max(0, entranceFrame - 20 - index * 30);
+          const cardFrame = Math.max(0, sequenceFrame - 20 - index * 30);
           const cardProgress = spring({
             frame: cardFrame,
             fps: FPS,
@@ -151,9 +150,9 @@ export function ExperienceSection() {
           const cardOpacity = interpolate(cardProgress, [0, 1], [0, 1]);
           const cardX = interpolate(cardProgress, [0, 1], [40, 0]);
 
-          // Dot reveal based on scroll
-          const dotThreshold = 0.1 + index * 0.25;
-          const dotActive = sectionProgress >= dotThreshold;
+          // Dot reveal based on sequenceFrame
+          const dotThreshold = 30 + index * 25;
+          const dotActive = sequenceFrame >= dotThreshold;
           const dotScale = dotActive ? 1 : 0.5;
           const dotOpacity = dotActive ? 1 : 0.3;
 

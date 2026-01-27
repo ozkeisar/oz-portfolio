@@ -1,7 +1,9 @@
+import { FPS } from '../../config/sections';
+import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
+import { calculateExitAnimation } from '../../hooks/useExitAnimation';
 import { responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
-import { FPS, FRAME_CONFIG, getSectionProgress, useScrollContext } from '../ScrollController';
 
 type SkillCategory = {
   name: string;
@@ -28,19 +30,17 @@ const skillCategories: SkillCategory[] = [
 ];
 
 export function SkillsSection() {
-  const { frame, viewport } = useScrollContext();
-  const { start, end } = FRAME_CONFIG.skills;
-  const sectionProgress = getSectionProgress(frame, 'skills');
+  const { sequenceFrame, direction, viewport } = useAnimationContext();
+  const { isVisible, isExiting } = useSectionVisibility('skills');
 
-  // Only render when near or in section
-  if (frame < start - 30 || frame > end + 50) {
+  // Don't render if not visible
+  if (!isVisible) {
     return null;
   }
 
   // Section entrance
-  const entranceFrame = Math.max(0, frame - start);
   const entranceProgress = spring({
-    frame: entranceFrame,
+    frame: sequenceFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 80 },
   });
@@ -49,14 +49,13 @@ export function SkillsSection() {
   const titleOpacity = interpolate(entranceProgress, [0, 1], [0, 1]);
   const titleY = interpolate(entranceProgress, [0, 1], [30, 0]);
 
-  // Exit animation
-  const exitOpacity = interpolate(sectionProgress, [0.8, 1], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const exitY = interpolate(sectionProgress, [0.8, 1], [0, -40], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
+  // Exit animation (slides left - alternating from impact which went right)
+  const exitAnimation = calculateExitAnimation({
+    direction: 'left',
+    duration: 45,
+    currentFrame: sequenceFrame,
+    isExiting,
+    scrollDirection: direction,
   });
 
   // Responsive values
@@ -78,8 +77,8 @@ export function SkillsSection() {
         justifyContent: 'center',
         alignItems: 'center',
         padding,
-        opacity: exitOpacity * entranceProgress,
-        transform: `translateY(${exitY}px)`,
+        opacity: exitAnimation.opacity * entranceProgress,
+        transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
       }}
     >
       {/* Section title */}
@@ -110,7 +109,7 @@ export function SkillsSection() {
       >
         {skillCategories.map((category, categoryIndex) => {
           // Staggered entrance for each category
-          const categoryFrame = Math.max(0, entranceFrame - 15 - categoryIndex * 12);
+          const categoryFrame = Math.max(0, sequenceFrame - 15 - categoryIndex * 12);
           const categoryProgress = spring({
             frame: categoryFrame,
             fps: FPS,

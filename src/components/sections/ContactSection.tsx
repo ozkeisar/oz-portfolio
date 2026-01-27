@@ -1,10 +1,11 @@
+import { FPS } from '../../config/sections';
+import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 import { EmailIcon } from '../icons/EmailIcon';
 import { GitHubIcon } from '../icons/GitHubIcon';
 import { LinkedInIcon } from '../icons/LinkedInIcon';
-import { FPS, FRAME_CONFIG, getSectionProgress, useScrollContext } from '../ScrollController';
 
 type ContactLink = {
   name: string;
@@ -19,19 +20,17 @@ const contactLinks: ContactLink[] = [
 ];
 
 export function ContactSection() {
-  const { frame, viewport } = useScrollContext();
-  const { start } = FRAME_CONFIG.contact;
-  const sectionProgress = getSectionProgress(frame, 'contact');
+  const { sequenceFrame, viewport } = useAnimationContext();
+  const { isVisible } = useSectionVisibility('contact');
 
-  // Only render when near or in section
-  if (frame < start - 30) {
+  // Don't render if not visible
+  if (!isVisible) {
     return null;
   }
 
   // Section entrance
-  const entranceFrame = Math.max(0, frame - start);
   const entranceProgress = spring({
-    frame: entranceFrame,
+    frame: sequenceFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 80 },
   });
@@ -41,7 +40,7 @@ export function ContactSection() {
   const titleY = interpolate(entranceProgress, [0, 1], [30, 0]);
 
   // Subtitle animation (delayed)
-  const subtitleFrame = Math.max(0, entranceFrame - 10);
+  const subtitleFrame = Math.max(0, sequenceFrame - 10);
   const subtitleProgress = spring({
     frame: subtitleFrame,
     fps: FPS,
@@ -114,7 +113,7 @@ export function ContactSection() {
       >
         {contactLinks.map((link, index) => {
           // Staggered entrance for each icon
-          const iconFrame = Math.max(0, entranceFrame - 20 - index * 15);
+          const iconFrame = Math.max(0, sequenceFrame - 20 - index * 15);
           const iconEntrance = spring({
             frame: iconFrame,
             fps: FPS,
@@ -124,10 +123,10 @@ export function ContactSection() {
           const iconOpacity = interpolate(iconEntrance, [0, 1], [0, 1]);
           const iconScale = interpolate(iconEntrance, [0, 1], [0.7, 1]);
 
-          // Draw progress for line animation
+          // Draw progress for line animation based on sequenceFrame
           const drawProgress = interpolate(
-            sectionProgress,
-            [0.2 + index * 0.1, 0.5 + index * 0.1],
+            sequenceFrame,
+            [30 + index * 10, 60 + index * 10],
             [0, 1],
             { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
           );

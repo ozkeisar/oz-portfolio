@@ -1,90 +1,138 @@
+import { FPS, TYPEWRITER_CHAR_DELAY } from '../../config/sections';
+import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
+import { calculateExitAnimation } from '../../hooks/useExitAnimation';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
-import { FPS, FRAME_CONFIG, getSectionProgress, useScrollContext } from '../ScrollController';
+import { getTypewriterDuration, Typewriter } from '../Typewriter';
 
-// Highlighted company/project link component
-function HighlightedText({
-  children,
+// Calculate frame duration for a text string
+function getTextDuration(text: string): number {
+  return getTypewriterDuration(text, TYPEWRITER_CHAR_DELAY, FPS);
+}
+
+// Styled highlight with typewriter effect
+function Highlight({
+  text,
   href,
-  delay,
-  textFrame,
+  startFrame,
+  currentFrame,
 }: {
-  children: string;
+  text: string;
   href?: string;
-  delay: number;
-  textFrame: number;
+  startFrame: number;
+  currentFrame: number;
 }) {
-  const linkFrame = Math.max(0, textFrame - delay);
-  const linkProgress = spring({
-    frame: linkFrame,
-    fps: FPS,
-    config: { damping: 14, stiffness: 120 },
-  });
+  // Don't render until we've reached this point in the animation
+  if (currentFrame < startFrame) {
+    return null;
+  }
 
   const style: React.CSSProperties = {
     color: toRgbString(colors.accent),
     textDecoration: 'none',
-    opacity: interpolate(linkProgress, [0, 1], [0.5, 1]),
     fontWeight: 500,
   };
 
   if (href) {
     return (
       <a href={href} target="_blank" rel="noopener noreferrer" style={style}>
-        {children}
+        <Typewriter
+          text={text}
+          startFrame={startFrame}
+          currentFrame={currentFrame}
+          direction="forward"
+          showCursor={false}
+        />
       </a>
     );
   }
 
-  return <span style={style}>{children}</span>;
+  return (
+    <span style={style}>
+      <Typewriter
+        text={text}
+        startFrame={startFrame}
+        currentFrame={currentFrame}
+        direction="forward"
+        showCursor={false}
+      />
+    </span>
+  );
 }
 
-export function SummarySection() {
-  const { frame, viewport } = useScrollContext();
-  const { start, end } = FRAME_CONFIG.summary;
-  const sectionProgress = getSectionProgress(frame, 'summary');
+// Constants for animation timing
+const SUMMARY_ENTER_DURATION = 660; // Full animation duration (for effectiveFrame mapping)
+const SUMMARY_FAST_ENTER_DURATION = 90; // ~3 seconds fast enter (same speed as exit)
+const SUMMARY_REVERSE_DURATION = 90; // ~3 seconds to delete all text
+const SUMMARY_ENTER_DELAY = 35; // Delay before starting enter animation (let hero exit finish)
 
-  // Only render when near or in section
-  if (frame < start - 30 || frame > end + 50) {
+// OLD SLOW ENTER: To restore slow typewriter, change SUMMARY_FAST_ENTER_DURATION to 660
+// and set effectiveFrame = sequenceFrame for forward direction (non-reversing)
+
+export function SummarySection() {
+  const { sequenceFrame, direction, viewport } = useAnimationContext();
+  const { isVisible, isExiting, isReversing, isEntering } = useSectionVisibility('summary');
+
+  // Don't render if not visible
+  if (!isVisible) {
     return null;
   }
 
-  // Entrance animation
-  const entranceFrame = Math.max(0, frame - start);
+  // Calculate effectiveFrame - compress animation for both fast enter and reverse exit
+  // Forward (entering): sequenceFrame 0→90 maps to effectiveFrame 0→660 (fast forward) with delay
+  // Backward (reversing): sequenceFrame 0→90 maps to effectiveFrame 660→0 (fast reverse)
+  let effectiveFrame: number;
+  if (isReversing) {
+    // Reverse: 660 → 0
+    effectiveFrame = Math.max(0, SUMMARY_ENTER_DURATION * (1 - sequenceFrame / SUMMARY_REVERSE_DURATION));
+  } else if (isEntering) {
+    // Fast forward enter with delay: wait for hero to exit first
+    const delayedFrame = Math.max(0, sequenceFrame - SUMMARY_ENTER_DELAY);
+    effectiveFrame = Math.min(SUMMARY_ENTER_DURATION, SUMMARY_ENTER_DURATION * (delayedFrame / SUMMARY_FAST_ENTER_DURATION));
+  } else {
+    // Idle/active state - show full animation
+    effectiveFrame = SUMMARY_ENTER_DURATION;
+  }
+
+  // Entrance animations - use effectiveFrame for spring calculations
+  const entranceSpringFrame = effectiveFrame;
   const entranceProgress = spring({
-    frame: entranceFrame,
+    frame: entranceSpringFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 80 },
   });
 
-  // Section number animation
-  const numberFrame = Math.max(0, entranceFrame - 5);
+  // Section number animation (slightly delayed)
+  const numberFrame = Math.max(0, entranceSpringFrame - 5);
   const numberProgress = spring({
     frame: numberFrame,
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
 
-  // Text animation (slightly delayed)
-  const textFrame = Math.max(0, entranceFrame - 15);
-  const textProgress = spring({
-    frame: textFrame,
+  // Text container animation (slightly delayed)
+  const textContainerProgress = spring({
+    frame: Math.max(0, entranceSpringFrame - 15),
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
-  const textOpacity = interpolate(textProgress, [0, 1], [0, 1]);
-  const textY = interpolate(textProgress, [0, 1], [30, 0]);
+  const textOpacity = interpolate(textContainerProgress, [0, 1], [0, 1]);
+  const textY = interpolate(textContainerProgress, [0, 1], [30, 0]);
 
-  // Exit animation
-  const exitOpacity = interpolate(sectionProgress, [0.7, 1], [1, 0], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-  const exitY = interpolate(sectionProgress, [0.7, 1], [0, -40], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  // Exit animation (slides to the right) - only for forward exit, not when reversing
+  const exitAnimation = isReversing
+    ? { opacity: 1, translateX: 0, scale: 1 }
+    : calculateExitAnimation({
+        direction: 'right',
+        duration: 45,
+        currentFrame: sequenceFrame,
+        isExiting,
+        scrollDirection: direction,
+      });
+
+  // Typewriter timing - starts after entrance animations settle
+  const typewriterStartFrame = 25;
 
   // Responsive breakpoints
   const isMobile = viewport.width < 768;
@@ -139,8 +187,8 @@ export function SummarySection() {
         paddingTop: isMobile ? viewport.height * 0.12 : verticalPadding,
         paddingBottom: verticalPadding,
         gap: contentGap,
-        opacity: exitOpacity * entranceProgress,
-        transform: `translateY(${exitY}px)`,
+        opacity: exitAnimation.opacity * entranceProgress,
+        transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
       }}
     >
       {/* Photo spacer - reserves space for ProfileImageTransition */}
@@ -206,124 +254,298 @@ export function SummarySection() {
           />
         </div>
 
-        {/* Professional narrative */}
-        <div
-          style={{
-            fontSize: bodySize,
-            fontWeight: 400,
-            color: toRgbString(colors.textSecondary),
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            lineHeight: 1.75,
-          }}
-        >
-          <p style={{ margin: 0 }}>
-            Engineering leader with 9+ years of experience architecting and delivering complex
-            systems at scale. From{' '}
-            <HighlightedText delay={20} textFrame={textFrame}>
-              mission-critical defense systems
-            </HighlightedText>{' '}
-            in the Israeli Air Force to leading development teams at{' '}
-            <HighlightedText delay={25} textFrame={textFrame} href="https://abra-bm.com">
-              Abra
-            </HighlightedText>
-            , I specialize in turning ambitious technical challenges into production-ready
-            solutions.
-          </p>
+        {/* Professional narrative with sequential Typewriter effects */}
+        {(() => {
+          // Define paragraphs with their full text
+          const para1 =
+            'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From mission-critical defense systems in the Israeli Air Force to leading development teams at Abra, I specialize in turning ambitious technical challenges into production-ready solutions.';
+          const para2 =
+            'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms (1M+ users), real-time security systems, and medical imaging software.';
+          const para3 =
+            'Committed to advancing developer productivity through tooling and methodology. Creator of Mockingbird and architect of AI-augmented development workflows adopted across engineering teams.';
+          const coreCompLabel = 'Core competencies:';
 
-          <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
-            Currently directing AI-first development initiatives and managing cross-functional teams
-            delivering{' '}
-            <HighlightedText delay={30} textFrame={textFrame}>
-              enterprise banking platforms
-            </HighlightedText>{' '}
-            (1M+ users),{' '}
-            <HighlightedText delay={35} textFrame={textFrame}>
-              real-time security systems
-            </HighlightedText>
-            , and{' '}
-            <HighlightedText delay={40} textFrame={textFrame}>
-              medical imaging software
-            </HighlightedText>
-            .
-          </p>
+          // Calculate sequential timing - each starts after previous ends
+          const para1Start = typewriterStartFrame;
+          const para1Duration = getTextDuration(para1);
 
-          <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
-            Committed to advancing developer productivity through tooling and methodology. Creator
-            of{' '}
-            <HighlightedText
-              delay={45}
-              textFrame={textFrame}
-              href="https://github.com/ozkeisar/mockingbird"
-            >
-              Mockingbird
-            </HighlightedText>{' '}
-            and architect of AI-augmented development workflows adopted across engineering teams.
-          </p>
-        </div>
+          const para2Start = para1Start + para1Duration + 5; // 5 frame gap
+          const para2Duration = getTextDuration(para2);
 
-        {/* Tech stack */}
-        <div style={{ marginTop: responsiveSpacing(viewport.width, 20, 28) }}>
-          <p
-            style={{
-              margin: 0,
-              marginBottom: responsiveSpacing(viewport.width, 8, 12),
-              fontSize: bodySize - 1,
-              color: toRgbaString(colors.textSecondary, 0.8),
-              fontFamily: 'system-ui, -apple-system, sans-serif',
-            }}
-          >
-            Core competencies:
-          </p>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '8px 32px',
-              justifyItems: 'start',
-            }}
-          >
-            {techStack.map((tech, index) => {
-              const techItemFrame = Math.max(0, textFrame - 50 - index * 3);
-              const techProgress = spring({
-                frame: techItemFrame,
-                fps: FPS,
-                config: { damping: 14, stiffness: 120 },
-              });
+          const para3Start = para2Start + para2Duration + 5;
+          const para3Duration = getTextDuration(para3);
 
-              return (
-                <div
-                  key={tech}
+          const coreCompStart = para3Start + para3Duration + 10;
+          const coreCompDuration = getTextDuration(coreCompLabel);
+
+          const techStackStart = coreCompStart + coreCompDuration + 5;
+
+          return (
+            <>
+              <div
+                style={{
+                  fontSize: bodySize,
+                  fontWeight: 400,
+                  color: toRgbString(colors.textSecondary),
+                  fontFamily: 'system-ui, -apple-system, sans-serif',
+                  lineHeight: 1.75,
+                }}
+              >
+                {/* Paragraph 1 */}
+                <p style={{ margin: 0 }}>
+                  <Typewriter
+                    text="Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From "
+                    startFrame={para1Start}
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={!isReversing && effectiveFrame < para1Start + para1Duration}
+                  />
+                  <Highlight
+                    text="mission-critical defense systems"
+                    startFrame={
+                      para1Start +
+                      getTextDuration(
+                        'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text=" in the Israeli Air Force to leading development teams at "
+                    startFrame={
+                      para1Start +
+                      getTextDuration(
+                        'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From mission-critical defense systems'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                  <Highlight
+                    text="Abra"
+                    href="https://abra-bm.com"
+                    startFrame={
+                      para1Start +
+                      getTextDuration(
+                        'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From mission-critical defense systems in the Israeli Air Force to leading development teams at '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text=", I specialize in turning ambitious technical challenges into production-ready solutions."
+                    startFrame={
+                      para1Start +
+                      getTextDuration(
+                        'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From mission-critical defense systems in the Israeli Air Force to leading development teams at Abra'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                </p>
+
+                {/* Paragraph 2 */}
+                <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
+                  <Typewriter
+                    text="Currently directing AI-first development initiatives and managing cross-functional teams delivering "
+                    startFrame={para2Start}
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={
+                      !isReversing &&
+                      effectiveFrame >= para2Start &&
+                      effectiveFrame < para2Start + para2Duration
+                    }
+                  />
+                  <Highlight
+                    text="enterprise banking platforms"
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text=" (1M+ users), "
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                  <Highlight
+                    text="real-time security systems"
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms (1M+ users), '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text=", and "
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms (1M+ users), real-time security systems'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                  <Highlight
+                    text="medical imaging software"
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms (1M+ users), real-time security systems, and '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text="."
+                    startFrame={
+                      para2Start +
+                      getTextDuration(
+                        'Currently directing AI-first development initiatives and managing cross-functional teams delivering enterprise banking platforms (1M+ users), real-time security systems, and medical imaging software'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                </p>
+
+                {/* Paragraph 3 */}
+                <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
+                  <Typewriter
+                    text="Committed to advancing developer productivity through tooling and methodology. Creator of "
+                    startFrame={para3Start}
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={
+                      !isReversing &&
+                      effectiveFrame >= para3Start &&
+                      effectiveFrame < para3Start + para3Duration
+                    }
+                  />
+                  <Highlight
+                    text="Mockingbird"
+                    href="https://github.com/ozkeisar/mockingbird"
+                    startFrame={
+                      para3Start +
+                      getTextDuration(
+                        'Committed to advancing developer productivity through tooling and methodology. Creator of '
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                  />
+                  <Typewriter
+                    text=" and architect of AI-augmented development workflows adopted across engineering teams."
+                    startFrame={
+                      para3Start +
+                      getTextDuration(
+                        'Committed to advancing developer productivity through tooling and methodology. Creator of Mockingbird'
+                      )
+                    }
+                    currentFrame={effectiveFrame}
+                    direction="forward"
+                    showCursor={false}
+                  />
+                </p>
+              </div>
+
+              {/* Tech stack */}
+              <div style={{ marginTop: responsiveSpacing(viewport.width, 20, 28) }}>
+                <Typewriter
+                  text={coreCompLabel}
+                  startFrame={coreCompStart}
+                  currentFrame={effectiveFrame}
+                  direction="forward"
+                  as="p"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    opacity: interpolate(techProgress, [0, 1], [0, 1]),
-                    transform: `translateX(${interpolate(techProgress, [0, 1], [isMobile ? 0 : -10, 0])}px)`,
+                    margin: 0,
+                    marginBottom: responsiveSpacing(viewport.width, 8, 12),
+                    fontSize: bodySize - 1,
+                    color: toRgbaString(colors.textSecondary, 0.8),
+                    fontFamily: 'system-ui, -apple-system, sans-serif',
+                  }}
+                  showCursor={
+                    !isReversing &&
+                    effectiveFrame >= coreCompStart &&
+                    effectiveFrame < coreCompStart + coreCompDuration
+                  }
+                />
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '8px 32px',
+                    justifyItems: 'start',
                   }}
                 >
-                  <span
-                    style={{
-                      color: toRgbString(colors.accent),
-                      fontSize: 10,
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                    }}
-                  >
-                    ▹
-                  </span>
-                  <span
-                    style={{
-                      fontSize: bodySize - 2,
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      color: toRgbString(colors.textSecondary),
-                    }}
-                  >
-                    {tech}
-                  </span>
+                  {techStack.map((tech, index) => {
+                    const techItemStart = techStackStart + index * 5;
+                    const techItemFrame = Math.max(0, effectiveFrame - techItemStart);
+                    const techProgress = isReversing
+                      ? effectiveFrame >= techItemStart
+                        ? 1
+                        : 0
+                      : spring({
+                          frame: techItemFrame,
+                          fps: FPS,
+                          config: { damping: 14, stiffness: 120 },
+                        });
+
+                    return (
+                      <div
+                        key={tech}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 8,
+                          opacity: interpolate(techProgress, [0, 1], [0, 1]),
+                          transform: `translateX(${interpolate(techProgress, [0, 1], [isMobile ? 0 : -10, 0])}px)`,
+                        }}
+                      >
+                        <span
+                          style={{
+                            color: toRgbString(colors.accent),
+                            fontSize: 10,
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                          }}
+                        >
+                          ▹
+                        </span>
+                        <span
+                          style={{
+                            fontSize: bodySize - 2,
+                            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                            color: toRgbString(colors.textSecondary),
+                          }}
+                        >
+                          {tech}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );

@@ -3,16 +3,18 @@
 ## Context
 Creating a single-page portfolio that uses scroll-driven animations to present Oz Keisar's professional profile. The site must demonstrate technical excellence through its implementation while remaining performant on mobile devices.
 
-**Key Constraint**: ALL animations MUST follow the morph pattern from `/Users/ozkeisar/addit/addit-demos/src/demos/FullFlowDemo.tsx` - using `spring()` and `interpolate()` functions, never CSS transitions.
+**Key Constraint**: ALL animations MUST follow the morph pattern - using `spring()` and `interpolate()` functions, never CSS transitions.
 
 ## Goals / Non-Goals
 
 ### Goals
-- Scroll-driven frame-based animation system
-- Bidirectional playback (scroll up = reverse)
+- Triggered animation sequences ("video" model) instead of continuous scroll mapping
+- State machine for controlling animation flow
+- Bidirectional playback (scroll up = reverse animation)
+- Typewriter text effect for engaging content reveal
 - Seamless mobile and desktop experience
-- Fast information delivery for busy professionals
 - SVG line-drawing animations for contact icons
+- Sections exit with alternating horizontal slide directions
 
 ### Non-Goals
 - Multi-page navigation
@@ -22,100 +24,169 @@ Creating a single-page portfolio that uses scroll-driven animations to present O
 
 ## Architecture
 
-### Animation Flow
+### Animation State Machine
 ```
-User Scroll → Scroll Position (px) → Frame Number → Section Progress → Element Values
+[INTRO] → scroll locked, entrance animation plays
+    ↓
+[IDLE] → waiting for user scroll input
+    ↓ (user scrolls)
+[TRANSITIONING] → scroll locked, enter animation plays as "video"
+    ↓
+[CONTENT_SCROLL] or [BUFFERING] → content overflow scroll or buffer period
+    ↓ (user scrolls past content)
+[EXITING] → scroll locked, exit animation plays
+    ↓
+[TRANSITIONING] → next section enters...
 ```
 
-### Frame Distribution (Total: 900 frames)
-| Section | Frame Range | Duration |
-|---------|-------------|----------|
-| Hero | 0-100 | Entry + static |
-| Summary | 100-250 | Photo + bio |
-| Experience | 250-500 | Timeline build |
-| Impact | 500-650 | Numbers animate |
-| Skills | 650-800 | Grid reveal |
-| Contact | 800-900 | Icons draw |
+Scroll up = reverse playback (same locked sequences, played backward)
+
+### Animation Timing
+| Animation | Duration | Notes |
+|-----------|----------|-------|
+| Intro | 110 frames (~3.7s) | Hero entrance |
+| Section enter | 90-300 frames | Varies by section content |
+| Section exit | 45 frames (~1.5s) | Horizontal slide |
+| Buffer | 400ms | Fixed time between animations |
+| Typewriter | 25ms/char | Fast readable speed |
+
+### Section Exit Directions (Alternating)
+| Section | Exit Direction |
+|---------|----------------|
+| Hero | Left |
+| Summary | Right |
+| Experience | Left |
+| Impact | Right |
+| Skills | Left |
+| Contact | Right (last section) |
 
 ### Component Hierarchy
 ```
 App
-└── AnimationCanvas (full viewport)
-    └── ScrollController (provides frame context)
+└── AnimationProvider (state machine context)
+    └── AnimationCanvas (fixed full viewport)
         ├── HeroSection
-        ├── SummarySection (with photo)
+        ├── SummarySection (with Typewriter + photo placeholder)
         ├── ExperienceSection (vertical timeline)
         ├── ImpactSection (animated numbers)
         ├── SkillsSection (grid)
-        └── ContactSection (SVG line icons)
+        ├── ContactSection (SVG line icons)
+        └── ProfileImageTransition (animated photo)
+```
+
+### File Structure
+```
+src/
+├── types/
+│   └── animation.ts          # Type definitions for state machine
+├── config/
+│   └── sections.ts           # Section timing and configuration
+├── reducers/
+│   └── animationReducer.ts   # State machine reducer
+├── hooks/
+│   ├── useAnimationController.ts  # Core animation controller
+│   ├── useExitAnimation.ts        # Exit animation calculations
+│   └── useViewport.ts             # Responsive values
+├── context/
+│   └── AnimationContext.tsx  # React context provider
+├── components/
+│   ├── AnimationCanvas.tsx   # Fixed viewport container
+│   ├── Typewriter.tsx        # Letter-by-letter text reveal
+│   ├── ProfileImageTransition.tsx  # Animated photo
+│   ├── sections/             # Section components
+│   └── icons/                # SVG line-drawing icons
+└── utils/
+    ├── animation.ts          # interpolate, spring functions
+    └── colors.ts             # RGB color system
 ```
 
 ## Decisions
 
-### 1. Frame-Based Animation System
-**Decision**: Use pure `interpolate()` function for all animations, no CSS.
+### 1. Triggered Animation Sequences (State Machine)
+**Decision**: Replace continuous scroll-to-frame mapping with a state machine that triggers locked "video" animation sequences.
 
 **Rationale**:
-- Enables scroll-driven control (bidirectional)
-- Consistent with Remotion patterns
-- Full control over timing curves
-- No layout thrashing from CSS recalculation
+- Prevents accidental section skipping from fast/long scrolls
+- Each animation plays fully regardless of scroll amount
+- Cleaner mental model: scroll = "next section please"
+- Enables content overflow scrolling within sections
+- Better support for typewriter and complex entrance animations
 
 **Implementation**:
 ```tsx
-const interpolate = (
-  value: number,
-  inputRange: [number, number],
-  outputRange: [number, number],
-  options?: { extrapolateLeft?: 'clamp'; extrapolateRight?: 'clamp' }
-) => { ... }
+type AnimationState =
+  | 'INTRO'           // Initial entrance (scroll locked)
+  | 'IDLE'            // Waiting for scroll
+  | 'TRANSITIONING'   // Enter animation playing (scroll locked)
+  | 'CONTENT_SCROLL'  // Section active, smooth scroll for overflow
+  | 'EXITING'         // Exit animation playing (scroll locked)
+  | 'BUFFERING';      // Post-animation buffer
 ```
 
-### 2. Spring Function for Entrance Animations
-**Decision**: Implement spring physics for initial load animation.
+### 2. useReducer for State Management
+**Decision**: Use React's useReducer for the animation state machine.
 
-**Rationale**: Natural feeling motion for one-time entrance effects.
+**Rationale**:
+- Complex state transitions are explicit and predictable
+- Actions clearly describe what triggers each transition
+- Easy to add new states or modify transition logic
+- Better debugging with action logging
 
-### 3. Color System with RGB Objects
-**Decision**: Store colors as `{ r, g, b }` objects for morphing.
+### 3. Typewriter Component
+**Decision**: Create a dedicated Typewriter component for text reveal animations.
 
-**Rationale**: Enables smooth color transitions via interpolating each channel.
+**Rationale**:
+- Letter-by-letter reveal creates engagement
+- Timing calculations based on character count
+- Punctuation gets longer pauses for natural rhythm
+- Supports bidirectional playback
 
+**Implementation**:
 ```tsx
-const colors = {
-  background: { r: 10, g: 22, b: 40 },
-  accent: { r: 251, g: 191, b: 36 },
-};
+<Typewriter
+  text="Hello world"
+  startFrame={25}
+  currentFrame={sequenceFrame}
+  charDelay={25}  // ms per character
+/>
 ```
 
-### 4. SVG Line Drawing for Contact Icons
-**Decision**: Use `stroke-dasharray` and `stroke-dashoffset` animated via interpolate.
+### 4. Alternating Exit Directions
+**Decision**: Sections exit with alternating horizontal slide directions (left, right, left, right...).
 
-**Rationale**: Creates "drawing" effect without morphing shapes, more elegant for icons.
+**Rationale**:
+- Creates visual variety and flow
+- Provides sense of progression through content
+- More dynamic than uniform exit direction
 
-```tsx
-const pathLength = getTotalLength();
-const dashOffset = interpolate(progress, [0, 1], [pathLength, 0]);
-```
+### 5. Section Visibility Hook
+**Decision**: Create `useSectionVisibility()` hook for consistent visibility logic.
 
-### 5. Responsive Values via Interpolation
-**Decision**: All sizing values derived from viewport dimensions.
+**Rationale**:
+- Encapsulates complex visibility rules
+- Returns `isVisible`, `isCurrent`, `isExiting`, `isEntering` flags
+- Sections only render when visible (performance)
 
-**Rationale**: Single source of truth, no media queries needed.
+### 6. Scroll Locking During Animations
+**Decision**: Ignore all scroll events during TRANSITIONING, EXITING, and BUFFERING states.
 
-```tsx
-const fontSize = interpolate(viewportWidth, [320, 1200], [32, 80]);
-```
+**Rationale**:
+- Prevents animation interruption
+- User must wait for animation to complete
+- Creates intentional, polished experience
 
 ## Risks / Trade-offs
 
 | Risk | Mitigation |
 |------|------------|
-| Performance on low-end mobile | Use `will-change: transform` sparingly, batch reads |
-| Scroll jank | Use passive scroll listeners, requestAnimationFrame |
-| Large bundle size | Tree-shake unused Remotion code |
-| Browser compatibility | Test on Safari, handle vendor prefixes |
+| Animation feels slow | Tune durations, typewriter speed is adjustable |
+| User frustrated by scroll lock | Keep animations short (1.5-3s), clear visual feedback |
+| Complex state logic | Thorough testing, clear state transition diagram |
+| Performance on mobile | Sections unmount when not visible, will-change hints |
+| Long text takes too long | Typewriter speed tunable, enterDuration per section |
 
 ## Open Questions
-- Exact photo of Oz to use (user to provide)
-- Specific accent color shade (gold #fbbf24 as starting point)
+- [RESOLVED] Photo: Using oz-photo.webp
+- [RESOLVED] Accent color: Using gold #fbbf24
+- Optimal typewriter speed for readability vs. patience
+- Whether to add skip animation feature for impatient users
