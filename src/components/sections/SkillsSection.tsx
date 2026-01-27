@@ -200,7 +200,7 @@ export function SkillsSection() {
   // Responsive radius - oval shape on mobile (egg-like), circular on desktop
   const categoryRadiusX = networkSize * (isMobile ? 0.38 : isTablet ? 0.36 : 0.38);
   const categoryRadiusY = networkSize * (isMobile ? 0.48 : isTablet ? 0.36 : 0.38);
-  const skillRadius = networkSize * (isMobile ? 0.11 : 0.15);
+  const skillRadius = networkSize * (isMobile ? 0.18 : 0.15); // Larger orbit on mobile for more spacing
 
   // Use orbital layout on all screen sizes
   const useMobileLayout = false;
@@ -481,18 +481,20 @@ function OrbitRing({
   progress,
   breatheFrame,
   categoryIndex,
+  isMobile,
 }: {
   radius: number;
   progress: number;
   breatheFrame: number;
   categoryIndex: number;
+  isMobile: boolean;
 }) {
   const baseOpacity = interpolate(progress, [0, 1], [0, 0.7]);
   const center = radius;
 
-  // Create multiple wavy orbit layers - same count for all, but unique characteristics
+  // Create multiple wavy orbit layers - fewer on mobile for cleaner look
   const layers = [];
-  const numLayers = 3; // Same number of layers for all categories
+  const numLayers = isMobile ? 1 : 3;
 
   // Unique seed values per category for varied but consistent patterns
   const seed1 = (categoryIndex * 1.7 + 0.3) % 1;
@@ -635,6 +637,7 @@ function CategoryNode({
           progress={progress}
           breatheFrame={breatheFrame}
           categoryIndex={categoryIndex}
+          isMobile={isMobile}
         />
 
         {/* Center dot */}
@@ -649,18 +652,21 @@ function CategoryNode({
           }}
         />
       </div>
-      <span
-        style={{
-          fontSize: isMobile ? 10 : 12,
-          fontWeight: 600,
-          color: toRgbString(colors.textPrimary),
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          textAlign: 'center',
-          whiteSpace: 'nowrap',
-        }}
-      >
-        {name}
-      </span>
+      {/* Hide category name on mobile */}
+      {!isMobile && (
+        <span
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: toRgbString(colors.textPrimary),
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            textAlign: 'center',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {name}
+        </span>
+      )}
     </div>
   );
 }
