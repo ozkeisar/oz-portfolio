@@ -72,10 +72,9 @@ export const SECTIONS: SectionConfig[] = [
   },
   {
     id: 'skills',
-    // enterDuration needs to support:
-    // - Forward from impact: 30 delay + image arrival (75) + 180 animation = 285 frames
-    // - Backward from contact: 15 delay + 180 animation = 195 frames
-    enterDuration: 285, // Max of forward and backward durations
+    // enterDuration: 30 delay + 180 animation = 210 frames
+    // Animation completes when effectiveFrame reaches TOTAL_ANIMATION_DURATION
+    enterDuration: 210, // Forward entrance from Impact
     reverseDuration: 195, // Backward entrance: 15 delay (wait for Contact exit) + 180 animation
     exitDuration: 15, // 500ms fast exit (reverse of entrance animation)
     exitDirection: 'left',
