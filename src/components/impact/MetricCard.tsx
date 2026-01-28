@@ -14,9 +14,9 @@ type MetricCardProps = {
   viewportWidth: number;
 };
 
-// Animation timing constants
-const NUMBER_START_OFFSET = 20; // Frames after card starts before number counts
-const NUMBER_DURATION = 40; // Frames for number to count up
+// Animation timing constants (compressed for faster entrance)
+const NUMBER_START_OFFSET = 8; // Frames after card starts before number counts
+const NUMBER_DURATION = 25; // Frames for number to count up
 
 /**
  * MetricCard Component

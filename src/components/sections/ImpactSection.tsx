@@ -1,7 +1,6 @@
 import { FPS } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { featuredMetric, supportingMetrics } from '../../data/impactData';
-import { calculateExitAnimation } from '../../hooks/useExitAnimation';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbaString, toRgbString } from '../../utils/colors';
@@ -10,13 +9,14 @@ import { MetricCard } from '../impact/MetricCard';
 
 // Entrance animation timing (must match ProfileImageTransition)
 const FORWARD_ENTRANCE_DELAY = 30; // Wait for Experience exit animation before appearing
-const REVERSE_DURATION = 30; // Frames for reverse animation
+const BACKWARD_ENTRANCE_DELAY = 15; // Wait for Skills exit (500ms) before appearing
+const REVERSE_DURATION = 15; // Frames for reverse animation (500ms)
 
-// Animation sequence timing
-const FEATURED_START = 20; // Featured metric starts after header begins
-const SUPPORTING_ROW1_START = 50; // First row of supporting metrics
-const SUPPORTING_ROW2_START = 70; // Second row of supporting metrics
-const SUPPORTING_STAGGER = 10; // Stagger between metrics in same row
+// Animation sequence timing (compressed to 2s / 60 frames)
+const FEATURED_START = 5; // Featured metric starts after header begins
+const SUPPORTING_ROW1_START = 15; // First row of supporting metrics
+const SUPPORTING_ROW2_START = 25; // Second row of supporting metrics
+const SUPPORTING_STAGGER = 5; // Stagger between metrics in same row
 
 /**
  * Impact Section - "Achievement Constellation" Design
@@ -40,19 +40,21 @@ export function ImpactSection() {
 
   // Detect if entering forward from Experience (not backward from a later section)
   const isEnteringForward = isEntering && !isEnteringBackward;
+  const isExitingForward = isExiting && direction === 'forward';
+  const isExitingBackward = isExiting && direction === 'backward';
 
   // Responsive breakpoints
   const isMobile = viewport.width < 768;
 
-  // Section entrance animation - with delay when entering forward
-  let entranceProgress: number;
-  if (isReversing) {
-    // Reversing: fade out from 1 → 0
-    entranceProgress = interpolate(sequenceFrame, [0, REVERSE_DURATION], [1, 0], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
-  } else if (isEnteringForward) {
+  // ===========================================
+  // Unified animation logic
+  // ===========================================
+  let sectionOpacity = 1;
+  let sectionTranslateX = 0;
+  let sectionScale = 1;
+  let entranceProgress = 1; // For child animations
+
+  if (isEnteringForward) {
     // Forward entrance: delay until Experience exit animation is mostly done
     const delayedFrame = Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY);
     entranceProgress = spring({
@@ -60,20 +62,45 @@ export function ImpactSection() {
       fps: FPS,
       config: { damping: 14, stiffness: 80 },
     });
-  } else {
-    // Backward entrance or active state
+    sectionOpacity = entranceProgress;
+    sectionTranslateX = interpolate(entranceProgress, [0, 1], [-30, 0]);
+  } else if (isEnteringBackward) {
+    // Backward entrance from Skills: wait for Skills exit
+    const delayedFrame = Math.max(0, sequenceFrame - BACKWARD_ENTRANCE_DELAY);
     entranceProgress = spring({
-      frame: sequenceFrame,
+      frame: delayedFrame,
       fps: FPS,
       config: { damping: 14, stiffness: 80 },
     });
+    sectionOpacity = entranceProgress;
+    sectionTranslateX = interpolate(entranceProgress, [0, 1], [30, 0]);
+  } else if (isExitingForward) {
+    // Forward exit to Skills (500ms)
+    const exitProgress = interpolate(sequenceFrame, [0, 15], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    sectionOpacity = interpolate(exitProgress, [0, 1], [1, 0]);
+    sectionTranslateX = interpolate(exitProgress, [0, 1], [0, -50]);
+    sectionScale = interpolate(exitProgress, [0, 1], [1, 0.98]);
+  } else if (isExitingBackward || isReversing) {
+    // Backward exit to Experience (500ms)
+    const exitProgress = interpolate(sequenceFrame, [0, REVERSE_DURATION], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    sectionOpacity = interpolate(exitProgress, [0, 1], [1, 0]);
+    sectionTranslateX = interpolate(exitProgress, [0, 1], [0, 50]);
+    sectionScale = interpolate(exitProgress, [0, 1], [1, 0.98]);
   }
+  // else: active state - all values stay at defaults (opacity: 1, translateX: 0, scale: 1)
 
   // Calculate effective frame for child component animations
-  // This ensures components start animating at the right time
   const effectiveFrame = isEnteringForward
     ? Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY)
-    : sequenceFrame;
+    : isEnteringBackward
+      ? Math.max(0, sequenceFrame - BACKWARD_ENTRANCE_DELAY)
+      : sequenceFrame;
 
   // Header animation (slightly faster than content)
   const headerOpacity = interpolate(entranceProgress, [0, 0.6], [0, 1], {
@@ -84,19 +111,6 @@ export function ImpactSection() {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  // Exit animation
-  // - isReversing: fade out handled by entranceProgress above
-  // - isExiting forward: slide right
-  const exitAnimation = isReversing
-    ? { opacity: 1, translateX: 0, scale: 1 } // Opacity controlled by entranceProgress
-    : calculateExitAnimation({
-        direction: 'right',
-        duration: 45,
-        currentFrame: sequenceFrame,
-        isExiting,
-        scrollDirection: direction,
-      });
 
   // Responsive values
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
@@ -155,8 +169,8 @@ export function ImpactSection() {
         paddingRight: horizontalPadding,
         paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
-        opacity: exitAnimation.opacity * entranceProgress,
-        transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
+        opacity: sectionOpacity,
+        transform: `translateX(${sectionTranslateX}px) scale(${sectionScale})`,
         overflow: 'hidden',
       }}
     >

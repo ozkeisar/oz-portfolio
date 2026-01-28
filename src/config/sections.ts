@@ -5,7 +5,7 @@ import type { SectionConfig, SectionId } from '../types/animation';
  */
 export const FPS = 30;
 export const INTRO_DURATION_FRAMES = 110; // ~3.7 seconds at 30fps
-export const BUFFER_DURATION_MS = 200; // Buffer after animation completes
+export const BUFFER_DURATION_MS = 0; // No buffer - user can scroll immediately after animation completes
 
 /**
  * Typewriter timing
@@ -21,42 +21,52 @@ export const SECTIONS: SectionConfig[] = [
   {
     id: 'hero',
     // enterDuration handles both:
-    // - Intro animation (first time): full 110 frames
-    // - Forward wrap from Contact: 15 delay + 60 animation = 75 frames (110 is plenty)
-    enterDuration: 110,
-    // reverseDuration for backward wrap to Contact
-    reverseDuration: 90, // Hero → Contact backward wrap: 60 frames (30 exit + 60 image move overlap)
-    exitDuration: 45, // ~1.5s slide out
+    // - Intro animation (first load): full 110 frames (title draw, subtitle, accent, scroll indicator)
+    // - Forward wrap from Contact: 15 delay (wait for Contact exit) + 110 intro = 125 frames
+    enterDuration: 125, // Full intro animation after Contact exit
+    // reverseDuration handles backward entrance (full intro animation):
+    // - From Summary: 15 delay (wait for Summary exit) + 110 intro = 125 frames
+    reverseDuration: 125, // Full intro animation after Summary exit
+    // exitDuration: reverse of intro animation compressed to 500ms
+    exitDuration: 15, // 500ms exit (both to Summary and wrap to Contact)
     exitDirection: 'left',
     hasOverflowContent: false,
   },
   {
     id: 'summary',
-    // OLD SLOW ENTER: was 660 frames (~22s) for full typewriter animation
     // enterDuration needs to support both:
-    // - Forward from hero: 35 delay + 90 animation = 125 frames
-    // - Backward from experience: 60 delay (wait for exp reverse) + 90 animation = 150 frames
-    enterDuration: 150, // Max of forward and backward durations
-    reverseDuration: 90, // ~3s compressed reverse (text deletion) when going backward
-    exitDuration: 45,
+    // - Forward from hero: 15 delay + 30 animation = 45 frames
+    // - Backward from experience: 15 delay + 30 animation = 45 frames
+    enterDuration: 45, // 1s entry animation (15 delay + 30 animation)
+    reverseDuration: 45, // Same for backward entry
+    exitDuration: 15, // 500ms exit animation
     exitDirection: 'right',
     hasOverflowContent: true, // Text may overflow on mobile
   },
   {
     id: 'experience',
     // enterDuration needs to support:
-    // - Forward from summary: 110 delay (wait for text deletion) + 90 animation = 200 frames
-    // - Backward from later section: 90 animation (no delay)
-    enterDuration: 200, // Max of forward and backward durations
-    reverseDuration: 90, // Reverse animation when going backward
+    // - Forward from summary: 15 delay (wait for 500ms exit) + 30 animation = 45 frames
+    // - Backward from later section: 30 animation (no delay)
+    enterDuration: 45, // Max of forward and backward durations
+    // reverseDuration handles backward entrance from Impact:
+    // - 16 frames for Impact exit to complete (0-15 inclusive)
+    // - 15 frames delay (BACKWARD_ENTRANCE_DELAY)
+    // - 30 frames for Experience entrance animation
+    reverseDuration: 60, // Backward entrance from Impact (needs time for Impact exit + Experience entrance)
     exitDuration: 45,
     exitDirection: 'left',
     hasOverflowContent: true, // Enables scroll-driven timeline
   },
   {
     id: 'impact',
-    enterDuration: 210, // 7 seconds for full SVG + number animation sequence (6 items)
-    exitDuration: 45,
+    enterDuration: 90, // 3 seconds: 30 delay + 60 for animation sequence (2s)
+    // reverseDuration handles backward entrance from Skills:
+    // - 16 frames for Skills exit to complete (0-15 inclusive)
+    // - 15 frames delay (BACKWARD_ENTRANCE_DELAY)
+    // - 60 frames for Impact's animation sequence
+    reverseDuration: 90, // Backward entrance from Skills
+    exitDuration: 15, // 500ms exit animation
     exitDirection: 'right',
     hasOverflowContent: false, // Animation-based, not scroll-driven
   },
@@ -82,9 +92,8 @@ export const SECTIONS: SectionConfig[] = [
     // - Backward wrap from Hero: 15 delay + 45 animation = 60 frames
     reverseDuration: 90, // Use 90 to accommodate both cases
     // exitDuration handles forward exit:
-    // - Forward to Skills: 15 frames (500ms)
-    // - Forward wrap to Hero: 45 frames for dramatic exit (handled in component)
-    exitDuration: 45, // 1.5s exit animation for wrap transition
+    // - Forward wrap to Hero: 15 frames (500ms), then Hero appears immediately
+    exitDuration: 45, // Total transition time for wrap (contact exit + hero entrance overlap)
     exitDirection: 'right',
     hasOverflowContent: false,
   },

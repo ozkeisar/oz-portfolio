@@ -64,13 +64,10 @@ function Highlight({
 
 // Constants for animation timing
 const SUMMARY_ENTER_DURATION = 660; // Full animation duration (for effectiveFrame mapping)
-const SUMMARY_FAST_ENTER_DURATION = 90; // ~3 seconds fast enter (same speed as exit)
-const SUMMARY_REVERSE_DURATION = 90; // ~3 seconds to delete all text
-const SUMMARY_ENTER_DELAY = 35; // Delay before starting enter animation (let hero exit finish)
-const BACKWARD_FROM_EXPERIENCE_DELAY = 60; // Wait for experience reverse animation to complete
-
-// OLD SLOW ENTER: To restore slow typewriter, change SUMMARY_FAST_ENTER_DURATION to 660
-// and set effectiveFrame = sequenceFrame for forward direction (non-reversing)
+const SUMMARY_FAST_ENTER_DURATION = 30; // 1 second entry animation (30 frames at 30fps)
+const SUMMARY_REVERSE_DURATION = 15; // 500ms exit animation (15 frames at 30fps)
+const SUMMARY_ENTER_DELAY = 15; // Short delay after hero exit (500ms)
+const BACKWARD_FROM_EXPERIENCE_DELAY = 15; // Short delay after experience exit (500ms)
 
 export function SummarySection() {
   const {

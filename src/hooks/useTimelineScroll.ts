@@ -2,8 +2,9 @@ import { EXPERIENCE_ITEM_COUNT, SCROLL_PER_ITEM } from '../data/experienceData';
 
 /**
  * Timeline item state during scroll progression
+ * Sequential: collapsing (0-0.5) then writing (0.5-1.0)
  */
-export type ItemPhase = 'writing' | 'visible' | 'collapsing';
+export type ItemPhase = 'collapsing' | 'writing';
 
 /**
  * Scroll state for the timeline
@@ -22,6 +23,11 @@ export type TimelineScrollState = {
 /**
  * Get the scroll state from a content scroll offset
  * Maps continuous scroll to discrete item states
+ *
+ * Sequential behavior:
+ * - 0 to 0.5: Current item collapses (fast)
+ * - 0.5 to 1.0: Next item writes/expands
+ * Items don't overlap - current must finish collapsing before next appears
  */
 export function getTimelineScrollState(scrollOffset: number): TimelineScrollState {
   // Clamp scroll offset to valid range
@@ -33,13 +39,12 @@ export function getTimelineScrollState(scrollOffset: number): TimelineScrollStat
   const localProgress = Math.min(rawIndex - currentItemIndex, 1);
 
   // Determine phase based on local progress
+  // Sequential: collapse first (0-0.5), then write next (0.5-1.0)
   let phase: ItemPhase;
-  if (localProgress < 0.3) {
-    phase = 'writing';
-  } else if (localProgress < 0.7) {
-    phase = 'visible';
+  if (localProgress < 0.5) {
+    phase = 'collapsing'; // Current item collapses first
   } else {
-    phase = 'collapsing';
+    phase = 'writing'; // Next item appears after collapse
   }
 
   // Items before current are stacked
@@ -71,15 +76,20 @@ export type ItemState = {
 
 /**
  * Get the state for a specific item based on scroll position
+ *
+ * Sequential behavior:
+ * - Current item collapses during 0-0.5 of local progress
+ * - Next item writes/expands during 0.5-1.0 of local progress
+ * - Items don't overlap - one finishes before next begins
  */
 export function getItemState(
   itemIndex: number,
   scrollState: TimelineScrollState,
   stackedItemHeight: number
 ): ItemState {
-  const { currentItemIndex, localProgress, phase, stackedCount } = scrollState;
+  const { currentItemIndex, localProgress, stackedCount } = scrollState;
 
-  // Item is before current - it's stacked
+  // Item is before current - it's fully stacked
   if (itemIndex < currentItemIndex) {
     return {
       state: 'stacked',
@@ -90,56 +100,11 @@ export function getItemState(
     };
   }
 
-  // Item is the current one
+  // Item is the current one - it collapses during 0-0.5
   if (itemIndex === currentItemIndex) {
-    // Special case: First item (index 0) starts fully visible after entrance animation
-    // Its "writing" phase already happened during entrance, so we skip to visible/collapsing
-    if (itemIndex === 0) {
-      if (localProgress < 0.7) {
-        // First item is fully visible until collapse phase
-        return {
-          state: 'active',
-          typewriterProgress: 1,
-          collapseProgress: 0,
-          stackOffset: 0,
-          isVisible: true,
-        };
-      } else {
-        // Collapsing phase: 0.7-1.0 local progress
-        const collapseProgress = (localProgress - 0.7) / 0.3;
-        return {
-          state: 'collapsing',
-          typewriterProgress: 1 - collapseProgress,
-          collapseProgress,
-          stackOffset: 0,
-          isVisible: true,
-        };
-      }
-    }
-
-    // For items after the first, use normal phase logic
-    if (phase === 'writing') {
-      // Expanding/writing phase: 0-0.3 local progress
-      const writeProgress = localProgress / 0.3;
-      return {
-        state: 'expanding',
-        typewriterProgress: writeProgress,
-        collapseProgress: 0,
-        stackOffset: stackedCount * stackedItemHeight,
-        isVisible: true,
-      };
-    } else if (phase === 'visible') {
-      // Fully visible phase: 0.3-0.7 local progress
-      return {
-        state: 'active',
-        typewriterProgress: 1,
-        collapseProgress: 0,
-        stackOffset: stackedCount * stackedItemHeight,
-        isVisible: true,
-      };
-    } else {
-      // Collapsing phase: 0.7-1.0 local progress
-      const collapseProgress = (localProgress - 0.7) / 0.3;
+    if (localProgress < 0.5) {
+      // Collapsing phase: 0-0.5 local progress (fast collapse)
+      const collapseProgress = localProgress / 0.5;
       return {
         state: 'collapsing',
         typewriterProgress: 1 - collapseProgress, // Text deletes as we collapse
@@ -147,10 +112,43 @@ export function getItemState(
         stackOffset: stackedCount * stackedItemHeight,
         isVisible: true,
       };
+    } else {
+      // Current item is fully collapsed (stacked) during 0.5-1.0
+      return {
+        state: 'stacked',
+        typewriterProgress: 1,
+        collapseProgress: 1,
+        stackOffset: stackedCount * stackedItemHeight,
+        isVisible: true,
+      };
     }
   }
 
-  // Item is after current - it's upcoming (hidden)
+  // Item is the NEXT one (currentItemIndex + 1) - it appears during 0.5-1.0
+  if (itemIndex === currentItemIndex + 1) {
+    if (localProgress >= 0.5) {
+      // Writing/expanding phase: 0.5-1.0 local progress
+      const writeProgress = (localProgress - 0.5) / 0.5;
+      return {
+        state: 'expanding',
+        typewriterProgress: writeProgress,
+        collapseProgress: 0,
+        stackOffset: (stackedCount + 1) * stackedItemHeight, // +1 because current is now stacked
+        isVisible: true,
+      };
+    } else {
+      // Next item is hidden until current item finishes collapsing
+      return {
+        state: 'upcoming',
+        typewriterProgress: 0,
+        collapseProgress: 0,
+        stackOffset: 0,
+        isVisible: false,
+      };
+    }
+  }
+
+  // Item is further ahead - it's upcoming (hidden)
   return {
     state: 'upcoming',
     typewriterProgress: 0,
@@ -164,7 +162,8 @@ export function getItemState(
  * Calculate the total scroll needed for the experience section
  */
 export function getTotalExperienceScroll(): number {
-  // We need enough scroll to reach the last item and show it fully
-  // Last item doesn't need collapse scroll, just writing + visible phases
-  return SCROLL_PER_ITEM * (EXPERIENCE_ITEM_COUNT - 1) + SCROLL_PER_ITEM * 0.7;
+  // Sequential behavior: each item takes SCROLL_PER_ITEM to collapse + next item to write
+  // Last item doesn't need to collapse, just needs to be fully written (0.5 of scroll range)
+  // Total: (N-1) full transitions + 0.5 for last item to appear
+  return SCROLL_PER_ITEM * (EXPERIENCE_ITEM_COUNT - 1) + SCROLL_PER_ITEM * 0.5;
 }

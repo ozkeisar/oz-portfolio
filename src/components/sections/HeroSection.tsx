@@ -1,21 +1,31 @@
-import { FPS } from '../../config/sections';
+import { INTRO_DURATION_FRAMES, FPS } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';
 
-// Timing constants for backward transition
-const HERO_BACKWARD_ENTRANCE_DELAY = 80; // Hero starts entering after summary text is mostly deleted (90 frame reverse)
+// Timing constants for backward transition (from Summary)
+// Hero starts AFTER Summary exit completes (500ms = 15 frames)
+const HERO_BACKWARD_ENTRANCE_DELAY = 15; // Wait for Summary exit to complete
 
-// Timing constants for wrap transition (entering from contact via infinite loop)
-const HERO_WRAP_ENTRANCE_DELAY = 15; // Start fading in shortly after contact exit begins
-const HERO_WRAP_ENTRANCE_DURATION = 45; // Full fade-in duration to sync with image arrival
+// Timing constants for wrap transition (from Contact)
+// Hero starts AFTER Contact exit completes (500ms = 15 frames)
+const HERO_WRAP_ENTRANCE_DELAY = 15; // Wait for Contact exit to complete
+
+// Exit animation duration (500ms = 15 frames at 30fps)
+const EXIT_DURATION = 15;
+
+// Intro animation key frames (used for both intro and wrap entrance)
+const TITLE_DRAW_END = 90; // Title draws from 0-90
+const SUBTITLE_START = 75; // Subtitle starts appearing
+const ACCENT_LINE_START = 85; // Accent line starts appearing
+const SCROLL_INDICATOR_START = 100; // Scroll indicator starts appearing
 
 export function HeroSection() {
   const { introFrame, isIntroComplete, sequenceFrame, viewport, direction } = useAnimationContext();
 
-  const { isVisible, isCurrent, isExiting, isEnteringBackward, isEnteringFromWrap, isExitingToWrap } =
+  const { isVisible, isCurrent, isExiting, isEnteringBackward, isEnteringFromWrap } =
     useSectionVisibility('hero');
 
   // Forward wrap entrance: coming from Contact section (infinite loop)
@@ -26,108 +36,127 @@ export function HeroSection() {
     return null;
   }
 
-  // Calculate text drawing progress (0-1) based on intro frame
-  // Title draws from frame 0 to 90 (3 seconds)
-  const titleDrawProgress = interpolate(introFrame, [0, 90], [0, 1], {
+  // ===========================================
+  // Determine the effective animation frame
+  // ===========================================
+  // - During intro: use introFrame (0 → INTRO_DURATION_FRAMES)
+  // - During wrap entrance from Contact: use sequenceFrame as intro-like frame
+  // - During backward entrance from Summary: use sequenceFrame with delay (full intro animation)
+  // - During exit: use reversed frame (INTRO_DURATION_FRAMES → 0 compressed to EXIT_DURATION)
+  // - Otherwise: use full intro values (everything visible)
+
+  let effectiveFrame = introFrame;
+  let isAnimatingExit = false;
+
+  if (isEnteringFromContactWrap) {
+    // Wrap entrance from Contact: play full intro animation AFTER Contact exit completes
+    // sequenceFrame starts at 0 when Hero starts entering
+    // We delay the animation start by HERO_WRAP_ENTRANCE_DELAY frames
+    effectiveFrame = Math.max(0, sequenceFrame - HERO_WRAP_ENTRANCE_DELAY);
+  } else if (isEnteringBackward) {
+    // Backward entrance from Summary: play full intro animation after Summary exit completes
+    // sequenceFrame starts at 0 when Hero starts entering
+    // We delay the animation start by HERO_BACKWARD_ENTRANCE_DELAY frames
+    effectiveFrame = Math.max(0, sequenceFrame - HERO_BACKWARD_ENTRANCE_DELAY);
+  } else if (isExiting) {
+    // Exit animation: reverse the intro in EXIT_DURATION frames
+    // Map sequenceFrame (0 → EXIT_DURATION) to effectiveFrame (INTRO_DURATION_FRAMES → 0)
+    effectiveFrame = interpolate(sequenceFrame, [0, EXIT_DURATION], [INTRO_DURATION_FRAMES, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    isAnimatingExit = true;
+  } else if (isIntroComplete) {
+    // Normal state after intro: everything visible
+    effectiveFrame = INTRO_DURATION_FRAMES;
+  }
+
+  // ===========================================
+  // Calculate animation values based on effectiveFrame
+  // ===========================================
+
+  // Title drawing progress (0-1)
+  const titleDrawProgress = interpolate(effectiveFrame, [0, TITLE_DRAW_END], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   // Subtitle spring animation (appears as title nears completion)
-  const subtitleProgress = spring({
-    frame: introFrame - 75,
-    fps: FPS,
-    config: { damping: 14, stiffness: 100 },
-  });
-  const subtitleOpacity = interpolate(subtitleProgress, [0, 1], [0, 1]);
-  const subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0]);
+  // During exit, use interpolation instead of spring for smooth reverse
+  let subtitleOpacity: number;
+  let subtitleY: number;
 
-  // Accent line animation (appears with subtitle)
-  const accentLineProgress = spring({
-    frame: introFrame - 85,
-    fps: FPS,
-    config: { damping: 14, stiffness: 120 },
-  });
-  const accentLineWidth = interpolate(accentLineProgress, [0, 1], [0, 80]);
-  const accentLineOpacity = interpolate(accentLineProgress, [0, 1], [0, 1]);
+  if (isAnimatingExit) {
+    // Exit: linear interpolation for smooth reverse
+    const subtitleProgress = interpolate(effectiveFrame, [SUBTITLE_START, SUBTITLE_START + 20], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    subtitleOpacity = subtitleProgress;
+    subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0]);
+  } else {
+    // Entrance: use spring for natural feel
+    const subtitleProgress = spring({
+      frame: effectiveFrame - SUBTITLE_START,
+      fps: FPS,
+      config: { damping: 14, stiffness: 100 },
+    });
+    subtitleOpacity = interpolate(subtitleProgress, [0, 1], [0, 1]);
+    subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0]);
+  }
 
-  // Scroll indicator animation (appears right after)
-  const scrollIndicatorProgress = spring({
-    frame: introFrame - 100,
-    fps: FPS,
-    config: { damping: 14, stiffness: 100 },
-  });
-  const scrollIndicatorOpacity = interpolate(scrollIndicatorProgress, [0, 1], [0, 1]);
-  const scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
+  // Accent line animation
+  let accentLineWidth: number;
+  let accentLineOpacity: number;
 
-  // Exit animation - fade out upward (not using calculateExitAnimation)
-  // Also handle wrap exit (hero→contact when scrolling backward at hero)
-  const isExitingNormal = isExiting && !isExitingToWrap;
-  const exitOpacity = isExitingNormal
-    ? interpolate(sequenceFrame, [0, 30], [1, 0], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      })
-    : isExitingToWrap
-      ? interpolate(sequenceFrame, [0, 30], [1, 0], {
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-      : 1;
-  const exitTranslateY = isExitingNormal
-    ? interpolate(sequenceFrame, [0, 35], [0, -50], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      })
-    : isExitingToWrap
-      ? interpolate(sequenceFrame, [0, 35], [0, 50], {
-          // Slide down for backward wrap
-          extrapolateLeft: 'clamp',
-          extrapolateRight: 'clamp',
-        })
-      : 0;
-  const exitAnimation =
-    isEnteringBackward || isEnteringFromContactWrap
-      ? { opacity: 1, translateY: 0 }
-      : { opacity: exitOpacity, translateY: exitTranslateY };
+  if (isAnimatingExit) {
+    // Exit: linear interpolation
+    const accentProgress = interpolate(effectiveFrame, [ACCENT_LINE_START, ACCENT_LINE_START + 15], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    accentLineWidth = interpolate(accentProgress, [0, 1], [0, 80]);
+    accentLineOpacity = accentProgress;
+  } else {
+    // Entrance: use spring
+    const accentLineProgress = spring({
+      frame: effectiveFrame - ACCENT_LINE_START,
+      fps: FPS,
+      config: { damping: 14, stiffness: 120 },
+    });
+    accentLineWidth = interpolate(accentLineProgress, [0, 1], [0, 80]);
+    accentLineOpacity = interpolate(accentLineProgress, [0, 1], [0, 1]);
+  }
 
-  // Backward entrance animation - fade in after summary text deletion
-  // Duration matches image movement (30 frames) for sync
-  const backwardEntranceOpacity = isEnteringBackward
-    ? interpolate(
-        sequenceFrame,
-        [HERO_BACKWARD_ENTRANCE_DELAY, HERO_BACKWARD_ENTRANCE_DELAY + 30],
-        [0, 1],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-      )
-    : 1;
+  // Scroll indicator animation
+  let scrollIndicatorOpacity: number;
+  let scrollIndicatorY: number;
+  let scrollIndicatorProgress: number;
 
-  // Forward wrap entrance animation - fade in as image returns to "O"
-  // Delayed to sync with image animation
-  const wrapEntranceOpacity = isEnteringFromContactWrap
-    ? interpolate(
-        sequenceFrame,
-        [HERO_WRAP_ENTRANCE_DELAY, HERO_WRAP_ENTRANCE_DELAY + HERO_WRAP_ENTRANCE_DURATION],
-        [0, 1],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-      )
-    : 1;
-
-  // Forward wrap entrance translateY - subtle slide up effect
-  const wrapEntranceTranslateY = isEnteringFromContactWrap
-    ? interpolate(
-        sequenceFrame,
-        [HERO_WRAP_ENTRANCE_DELAY, HERO_WRAP_ENTRANCE_DELAY + HERO_WRAP_ENTRANCE_DURATION],
-        [30, 0],
-        { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-      )
-    : 0;
+  if (isAnimatingExit) {
+    // Exit: linear interpolation
+    scrollIndicatorProgress = interpolate(effectiveFrame, [SCROLL_INDICATOR_START, SCROLL_INDICATOR_START + 10], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    scrollIndicatorOpacity = scrollIndicatorProgress;
+    scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
+  } else {
+    // Entrance: use spring
+    scrollIndicatorProgress = spring({
+      frame: effectiveFrame - SCROLL_INDICATOR_START,
+      fps: FPS,
+      config: { damping: 14, stiffness: 100 },
+    });
+    scrollIndicatorOpacity = interpolate(scrollIndicatorProgress, [0, 1], [0, 1]);
+    scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
+  }
 
   // Responsive sizes
   const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
   const padding = responsiveSpacing(viewport.width, 20, 40);
 
-  // Bounce animation for scroll indicator (only when visible and not exiting/entering)
+  // Bounce animation for scroll indicator (only when visible and not animating)
   const bounceOffset =
     scrollIndicatorProgress > 0.5 &&
     isCurrent &&
@@ -137,11 +166,11 @@ export function HeroSection() {
       ? Math.sin((introFrame + sequenceFrame) * 0.1) * 8
       : 0;
 
-  // Combined opacity: exit animation * backward entrance * wrap entrance
-  const finalOpacity = exitAnimation.opacity * backwardEntranceOpacity * wrapEntranceOpacity;
+  // Final opacity: all entrance animations are handled by effectiveFrame
+  const finalOpacity = 1;
 
-  // Combined translateY for wrap entrance
-  const finalTranslateY = exitAnimation.translateY + wrapEntranceTranslateY;
+  // No translateY needed - animations are self-contained
+  const finalTranslateY = 0;
 
   return (
     <div
@@ -202,7 +231,7 @@ export function HeroSection() {
           flexDirection: 'column',
           alignItems: 'center',
           gap: 8,
-          opacity: scrollIndicatorOpacity * exitAnimation.opacity,
+          opacity: scrollIndicatorOpacity,
           transform: `translateY(${scrollIndicatorY + bounceOffset}px)`,
         }}
       >

@@ -19,9 +19,12 @@ const STACKED_ITEM_HEIGHT = 44; // Height of a stacked (collapsed) item
 const EXPANDED_ITEM_HEIGHT = 280; // Approximate height of expanded item
 
 // Entrance animation timing
-const ENTRANCE_DURATION = 90; // Frames for entrance animation
-const FIRST_ITEM_WRITE_START = 30; // Frame when first item starts writing
-const FORWARD_ENTRANCE_DELAY = 110; // Wait for Summary text deletion before appearing (~3.7s at 30fps)
+const ENTRANCE_DURATION = 45; // Frames for entrance animation (1.5s total: 0.5s delay + 1s typewriter)
+const FIRST_ITEM_WRITE_START = 15; // Frame when first item starts writing (after header appears)
+const FIRST_ITEM_WRITE_DURATION = 30; // 1 second for typewriter (30 frames at 30fps)
+const FORWARD_ENTRANCE_DELAY = 15; // Wait for Summary exit (500ms) before appearing
+const BACKWARD_ENTRANCE_DELAY = 15; // Wait for Impact exit (500ms) before appearing
+
 
 /**
  * Experience Section with scroll-driven timeline animation
@@ -95,7 +98,7 @@ export function ExperienceSection() {
   // Calculate entrance/exit progress
   // During TRANSITIONING (entering), sequenceFrame goes 0 → enterDuration
   // When isReversing (exiting backward), we reverse the animation
-  const REVERSE_DURATION = 60; // Frames for reverse animation
+  const REVERSE_DURATION = 15; // 500ms reverse animation (15 frames at 30fps)
 
   // Detect if exiting forward (to Impact)
   const isExitingForward = isExiting && direction === 'forward';
@@ -118,13 +121,17 @@ export function ExperienceSection() {
       fps: FPS,
       config: { damping: 14, stiffness: 80 },
     });
-  } else {
-    // Backward entrance or active state
+  } else if (isEnteringBackward) {
+    // Backward entrance from Impact: wait for Impact exit (500ms) before appearing
+    const delayedFrame = Math.max(0, sequenceFrame - BACKWARD_ENTRANCE_DELAY);
     entranceProgress = spring({
-      frame: sequenceFrame,
+      frame: delayedFrame,
       fps: FPS,
       config: { damping: 14, stiffness: 80 },
     });
+  } else {
+    // Active state
+    entranceProgress = 1;
   }
 
   // Effective frame for typewriter during entrance
@@ -134,9 +141,10 @@ export function ExperienceSection() {
     // Forward entrance: wait for Summary text deletion, then start typewriter
     const delayedFrame = Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY);
     effectiveTypewriterFrame = Math.max(0, delayedFrame - FIRST_ITEM_WRITE_START);
-  } else if (isEntering && !isReversing) {
-    // Backward entrance: start typewriter after initial delay (no extra wait)
-    effectiveTypewriterFrame = Math.max(0, sequenceFrame - FIRST_ITEM_WRITE_START);
+  } else if (isEnteringBackward) {
+    // Backward entrance from Impact: wait for Impact exit, then start typewriter
+    const delayedFrame = Math.max(0, sequenceFrame - BACKWARD_ENTRANCE_DELAY);
+    effectiveTypewriterFrame = Math.max(0, delayedFrame - FIRST_ITEM_WRITE_START);
   } else if (isActive) {
     // Section is active - use full entrance animation time for first item
     // Then content scroll drives the rest
@@ -224,6 +232,76 @@ export function ExperienceSection() {
     config: { damping: 14, stiffness: 100 },
   });
 
+  // ===========================================
+  // Content container entrance/exit animation
+  // ===========================================
+  // Entrance: slides up and fades in (delayed after header)
+  // Exit: slides in exit direction and fades out
+
+  const CONTENT_ENTRANCE_DELAY = 10; // Start after header begins appearing
+
+  let contentOpacity: number;
+  let contentTranslateY: number;
+  let contentTranslateX: number;
+
+  if (isReversing) {
+    // Reversing (going back to Summary): slide right and fade out
+    const reverseProgress = interpolate(sequenceFrame, [0, REVERSE_DURATION], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    contentOpacity = interpolate(reverseProgress, [0, 0.6], [1, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    contentTranslateY = 0;
+    contentTranslateX = interpolate(reverseProgress, [0, 1], [0, 50], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+  } else if (isExitingForward) {
+    // Exiting forward (to Impact): slide left and fade out
+    const exitProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    contentOpacity = interpolate(exitProgress, [0, 0.6], [1, 0], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    contentTranslateY = 0;
+    contentTranslateX = interpolate(exitProgress, [0, 1], [0, -50], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+  } else if (isEnteringForward) {
+    // Forward entrance from Summary: morph animation reveals content
+    // Opacity fades in quickly at the start, then clip-path handles the reveal
+    const delayedFrame = Math.max(0, sequenceFrame - FORWARD_ENTRANCE_DELAY);
+    contentOpacity = interpolate(delayedFrame, [0, 10], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    contentTranslateY = 0;
+    contentTranslateX = 0;
+  } else if (isEnteringBackward) {
+    // Backward entrance from Impact: wait for Impact exit, then slide in from left
+    const delayedFrame = Math.max(0, sequenceFrame - BACKWARD_ENTRANCE_DELAY);
+    const contentEntranceProgress = spring({
+      frame: Math.max(0, delayedFrame - CONTENT_ENTRANCE_DELAY),
+      fps: FPS,
+      config: { damping: 14, stiffness: 80 },
+    });
+    contentOpacity = interpolate(contentEntranceProgress, [0, 1], [0, 1]);
+    contentTranslateY = 0;
+    contentTranslateX = interpolate(contentEntranceProgress, [0, 1], [-30, 0]);
+  } else {
+    // Active state: fully visible
+    contentOpacity = 1;
+    contentTranslateY = 0;
+    contentTranslateX = 0;
+  }
+
   // During entrance, show first item writing
   // After entrance, use scroll state to determine what to show
   // Skip entrance phase when entering backward - show last item immediately
@@ -231,8 +309,9 @@ export function ExperienceSection() {
     isEntering && !isReversing && !isEnteringBackward && sequenceFrame < ENTRANCE_DURATION;
 
   // Calculate first item typewriter progress during entrance
+  // Fast typewriter: 1 second (30 frames) to write all content
   const entranceTypewriterProgress = isEntrancePhase
-    ? interpolate(effectiveTypewriterFrame, [0, 60], [0, 1], {
+    ? interpolate(effectiveTypewriterFrame, [0, FIRST_ITEM_WRITE_DURATION], [0, 1], {
         extrapolateLeft: 'clamp',
         extrapolateRight: 'clamp',
       })
@@ -326,6 +405,8 @@ export function ExperienceSection() {
           maxWidth: contentMaxWidth + (isMobile ? 0 : 60),
           flex: 1,
           overflow: 'hidden',
+          opacity: contentOpacity,
+          transform: `translateY(${contentTranslateY}px) translateX(${contentTranslateX}px)`,
         }}
       >
         {/* Timeline Rail (hidden on mobile) */}
@@ -343,7 +424,7 @@ export function ExperienceSection() {
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
+            overflow: 'visible',
           }}
         >
           {experienceData.map((item, index) => {
@@ -380,6 +461,7 @@ export function ExperienceSection() {
                 viewport={viewport}
                 expandedHeight={EXPANDED_ITEM_HEIGHT}
                 stackedHeight={STACKED_ITEM_HEIGHT}
+                useMorphAnimation={index > 0} // Only items after the first use morph
               />
             );
           })}

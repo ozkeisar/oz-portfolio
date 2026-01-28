@@ -7,12 +7,19 @@ import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../hooks
 import { interpolate, spring } from '../utils/animation';
 import { colors, toRgbString } from '../utils/colors';
 
-// Timing constants for backward transition
-const IMAGE_BACKWARD_MOVE_DELAY = 80; // Image starts moving back after text is mostly deleted
-const IMAGE_MOVE_DURATION = 30; // Duration for image to move back to hero (faster to match hero fade-in)
+// Hero intro timing constants (must match HeroSection)
+const IMAGE_APPEAR_START = 85; // Frame when image starts appearing in intro
+const IMAGE_APPEAR_END = 100; // Frame when image fully appears in intro
+
+// Timing constants for Hero → Summary transition (shared element)
+const HERO_TO_SUMMARY_IMAGE_DURATION = 30; // 1 second for image to move to summary
+
+// Timing constants for backward transition (Summary → Hero)
+const IMAGE_BACKWARD_MOVE_DELAY = 0; // Image starts moving immediately when going back to Hero
+const IMAGE_MOVE_DURATION = 30; // 1 second for image to move back to hero "O"
 
 // Timing constants for experience transition
-const EXPERIENCE_TRANSITION_DELAY = 110; // Wait for summary text deletion before moving (~3.7s at 30fps)
+const EXPERIENCE_TRANSITION_DELAY = 15; // Wait for summary exit (500ms) before moving
 const EXPERIENCE_TRANSITION_DURATION = 30; // Frames for image to move to experience position
 
 // Timing constants for impact transition
@@ -27,7 +34,7 @@ const SKILLS_TRANSITION_DURATION = 45; // Frames for image to move to skills cen
 const CONTACT_TRANSITION_DURATION = 15; // Matches skills exit duration (500ms)
 
 // Timing constants for wrap transition (contact→hero loop)
-const WRAP_TRANSITION_DELAY = 15; // Small delay after contact starts exiting
+const WRAP_TRANSITION_DELAY = 0; // Image starts moving immediately when wrap transition begins
 
 /**
  * Profile image that starts inside the "O" letter and transitions
@@ -56,13 +63,35 @@ export function ProfileImageTransition() {
   const contactVisibility = useSectionVisibility('contact');
 
   // Image appearance in the O (after title animation completes during intro)
-  const appearanceProgress = interpolate(introFrame, [85, 100], [0, 1], {
+  const introAppearanceProgress = interpolate(introFrame, [IMAGE_APPEAR_START, IMAGE_APPEAR_END], [0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
+  // Forward wrap entrance from Contact: replay intro appearance timing
+  const isEnteringFromContactWrap = heroVisibility.isEnteringFromWrap && direction === 'forward';
+
+  // Backward entrance from Summary: replay intro appearance timing (full intro animation)
+  const isHeroEnteringBackward = heroVisibility.isEnteringBackward;
+
+  // Hero exit animation: image stays visible as shared element for all transitions
+  // - Forward to Summary: image stays visible, moves to Summary position
+  // - Backward wrap to Contact: image stays visible, moves to Contact position
+  const isHeroExitingForward = heroVisibility.isExiting && direction === 'forward' && !heroVisibility.isExitingToWrap;
+  const isHeroExitingToWrap = heroVisibility.isExitingToWrap && direction === 'backward';
+
+  // Image stays visible during Hero exit (shared element behavior)
+  // No fade out - image just moves to the next position
+
+  // Summary entrance: image stays visible (shared element from Hero)
+  const isSummaryEntering = summaryVisibility.isEntering && direction === 'forward';
+
+  // Contact entrance from backward wrap: image stays visible (shared element)
+  const isContactEnteringFromWrap = contactVisibility.isEnteringFromWrap && direction === 'backward';
+
   // Don't render until animation starts appearing
-  if (appearanceProgress <= 0 && !isIntroComplete) {
+  // Also render during backward entrance to Hero (full intro animation)
+  if (introAppearanceProgress <= 0 && !isIntroComplete && !isEnteringFromContactWrap && !isHeroEnteringBackward) {
     return null;
   }
 
@@ -115,19 +144,30 @@ export function ProfileImageTransition() {
 
   if (heroVisibility.isEnteringBackward) {
     // Going backward from summary to hero
-    // Wait until text deletion is mostly done, then move image back
+    // Image moves immediately as Summary exits (shared element)
     transitionProgress = interpolate(
       sequenceFrame,
       [IMAGE_BACKWARD_MOVE_DELAY, IMAGE_BACKWARD_MOVE_DELAY + IMAGE_MOVE_DURATION],
       [1, 0],
       { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
     );
-  } else if (heroVisibility.isExiting && direction === 'forward') {
-    // Hero is exiting forward - animate image to summary position
-    transitionProgress = interpolate(sequenceFrame, [0, 45], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
+  } else if (isHeroExitingForward) {
+    // Hero is exiting forward to Summary
+    // Image moves immediately as Hero exits (shared element behavior)
+    transitionProgress = interpolate(
+      sequenceFrame,
+      [0, HERO_TO_SUMMARY_IMAGE_DURATION],
+      [0, 1],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
+  } else if (isSummaryEntering) {
+    // Summary is entering - continue the image movement from where Hero exit left off
+    transitionProgress = interpolate(
+      sequenceFrame,
+      [0, HERO_TO_SUMMARY_IMAGE_DURATION],
+      [0, 1],
+      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+    );
   } else if (
     summaryVisibility.isCurrent &&
     !summaryVisibility.isExiting &&
@@ -611,20 +651,21 @@ export function ProfileImageTransition() {
   let wrapToHeroProgress = 0;
 
   if (isWrappingToHero) {
-    // Contact exiting forward to hero via wrap - dramatic spring animation
+    // Contact exiting forward to hero - image moves at its own smooth pace
+    // Content disappears in 500ms, but image takes longer for elegant motion
     const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
     wrapToHeroProgress = spring({
       frame: delayedFrame,
       fps: FPS,
-      config: { damping: 16, stiffness: 60 }, // Slower, smoother for dramatic effect
+      config: { damping: 18, stiffness: 40 }, // Slow, smooth spring (~1.5-2 seconds)
     });
   } else if (heroVisibility.isEnteringFromWrap && direction === 'forward') {
-    // Hero entering from wrap - continue the spring animation
+    // Hero entering from wrap - continue the smooth spring animation
     const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
     wrapToHeroProgress = spring({
       frame: delayedFrame,
       fps: FPS,
-      config: { damping: 16, stiffness: 60 },
+      config: { damping: 18, stiffness: 40 }, // Same smooth spring
     });
   }
 
@@ -632,20 +673,20 @@ export function ProfileImageTransition() {
   let wrapToContactProgress = 0;
 
   if (isWrappingToContact) {
-    // Hero exiting backward to contact via wrap
+    // Hero exiting backward to contact - image moves at its own smooth pace
     const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
     wrapToContactProgress = spring({
       frame: delayedFrame,
       fps: FPS,
-      config: { damping: 16, stiffness: 60 },
+      config: { damping: 18, stiffness: 40 }, // Slow, smooth spring to match forward wrap
     });
   } else if (contactVisibility.isEnteringFromWrap && direction === 'backward') {
-    // Contact entering from backward wrap
+    // Contact entering from backward wrap - continue the smooth spring
     const delayedFrame = Math.max(0, sequenceFrame - WRAP_TRANSITION_DELAY);
     wrapToContactProgress = spring({
       frame: delayedFrame,
       fps: FPS,
-      config: { damping: 16, stiffness: 60 },
+      config: { damping: 18, stiffness: 40 },
     });
   }
 
@@ -829,8 +870,9 @@ export function ProfileImageTransition() {
     currentY = interpolate(wrapToHeroProgress, [0, 1], [contactY, heroY]);
     currentWidth = interpolate(wrapToHeroProgress, [0, 1], [contactImageSize, oWidth]);
     currentHeight = interpolate(wrapToHeroProgress, [0, 1], [contactImageSize, oHeight]);
-  } else if (wrapToContactProgress > 0) {
+  } else if (isWrappingToContact || wrapToContactProgress > 0) {
     // Backward wrap: hero "O" → contact
+    // Use wrapToContactProgress for animation, but ensure we start from hero position
     currentX = interpolate(wrapToContactProgress, [0, 1], [heroX, contactX]);
     currentY = interpolate(wrapToContactProgress, [0, 1], [heroY, contactY]);
     currentWidth = interpolate(wrapToContactProgress, [0, 1], [oWidth, contactImageSize]);
@@ -838,7 +880,29 @@ export function ProfileImageTransition() {
   }
 
   // Opacity: fade in during appearance, stay visible during transitions
-  const opacity = isIntroComplete ? 1 : appearanceProgress;
+  // Image acts as a shared element between sections (stays visible during transitions)
+  // IMPORTANT: Image only fades in during FIRST LOAD (intro animation)
+  // For all other transitions (backward from Summary, wrap from Contact), image stays visible as shared element
+  let opacity: number;
+
+  if (isEnteringFromContactWrap) {
+    // Wrap entrance from Contact to Hero: image stays visible (shared element)
+    // Hero content plays intro animation, but image is already visible and just moves to position
+    opacity = 1;
+  } else if (isHeroEnteringBackward) {
+    // Backward entrance from Summary to Hero: image stays visible (shared element)
+    // Hero content plays intro animation, but image is already visible and just moves to position
+    opacity = 1;
+  } else if (isHeroExitingForward || isHeroExitingToWrap || isSummaryEntering || isContactEnteringFromWrap) {
+    // All other transitions: image stays visible (shared element behavior)
+    opacity = 1;
+  } else if (isIntroComplete) {
+    // Normal state: fully visible
+    opacity = 1;
+  } else {
+    // FIRST LOAD ONLY: Intro animation - image fades in at frames 85-100
+    opacity = introAppearanceProgress;
+  }
 
   // Image no longer fades when transitioning to/from experience - it moves instead
   const exitOpacity = 1;

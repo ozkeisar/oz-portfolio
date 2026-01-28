@@ -32,7 +32,7 @@ export const experienceData: ExperienceItem[] = [
   },
   {
     id: 'leumi-lead',
-    role: 'Team Lead - Mobile Development',
+    role: 'Team Lead - Mobile Dev',
     company: 'Abra',
     client: 'Leumi Bank & Pepper',
     period: '2023 - 2024',

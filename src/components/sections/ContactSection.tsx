@@ -64,9 +64,9 @@ const CONTACT_REVERSE_DURATION = 15; // Exit animation (500ms at 30fps) - revers
 const CONTACT_ENTER_DELAY = 15; // Wait for Skills exit to complete (500ms at 30fps)
 
 // Wrap transition timing
-const WRAP_EXIT_DURATION = 45; // Exit animation for wrap to hero (1.5 seconds)
-const WRAP_ENTRANCE_DELAY = 15; // Wait for hero to start exiting
-const WRAP_ENTRANCE_DURATION = 45; // Entrance from hero wrap (1.5 seconds)
+const WRAP_EXIT_DURATION = 15; // Exit animation for wrap to hero (500ms at 30fps)
+const WRAP_ENTRANCE_DELAY = 10; // Start appearing as hero finishes exiting
+const WRAP_ENTRANCE_DURATION = 45; // Entrance from hero wrap (1.5 seconds) - syncs with image
 
 export function ContactSection() {
   const { sequenceFrame, direction, viewport } = useAnimationContext();

@@ -14,10 +14,10 @@ type FeaturedMetricProps = {
   viewportWidth: number;
 };
 
-// Animation timing constants
-const NUMBER_START_OFFSET = 30; // Frames after card starts before number counts
-const NUMBER_DURATION = 50; // Frames for number to count up (longer for dramatic effect)
-const GLOW_PULSE_START = 60; // Frames after entrance when glow starts
+// Animation timing constants (compressed for faster entrance)
+const NUMBER_START_OFFSET = 10; // Frames after card starts before number counts
+const NUMBER_DURATION = 30; // Frames for number to count up
+const GLOW_PULSE_START = 30; // Frames after entrance when glow starts
 
 /**
  * FeaturedMetric Component
