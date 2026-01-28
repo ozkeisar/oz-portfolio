@@ -1,9 +1,20 @@
+import { useCallback, useEffect, useRef } from 'react';
 import { INTRO_DURATION_FRAMES, FPS } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
+import { useHeroOPosition } from '../../context/HeroOPositionContext';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';
+
+// "O" letter center position in viewBox coordinates (0 0 320 70)
+// The O path goes from (8,6) to (62,64), so center is (35, 35)
+const O_VIEWBOX_CENTER_X = 35;
+const O_VIEWBOX_CENTER_Y = 35;
+const O_VIEWBOX_WIDTH = 54; // 62 - 8
+const O_VIEWBOX_HEIGHT = 58; // 64 - 6
+const VIEWBOX_WIDTH = 320;
+const VIEWBOX_HEIGHT = 70;
 
 // Timing constants for backward transition (from Summary)
 // Hero starts AFTER Summary exit completes (500ms = 15 frames)
@@ -24,12 +35,67 @@ const SCROLL_INDICATOR_START = 100; // Scroll indicator starts appearing
 
 export function HeroSection() {
   const { introFrame, isIntroComplete, sequenceFrame, viewport, direction } = useAnimationContext();
+  const { setOPosition } = useHeroOPosition();
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const { isVisible, isCurrent, isExiting, isEnteringBackward, isEnteringFromWrap } =
     useSectionVisibility('hero');
 
   // Forward wrap entrance: coming from Contact section (infinite loop)
   const isEnteringFromContactWrap = isEnteringFromWrap && direction === 'forward';
+
+  // Measure and report the "O" position whenever the SVG is rendered
+  const measureOPosition = useCallback(() => {
+    if (!svgRef.current) return;
+
+    const svgRect = svgRef.current.getBoundingClientRect();
+
+    // Convert viewBox coordinates to screen coordinates
+    const scaleX = svgRect.width / VIEWBOX_WIDTH;
+    const scaleY = svgRect.height / VIEWBOX_HEIGHT;
+
+    // Calculate "O" center in screen coordinates
+    const oCenterX = svgRect.left + O_VIEWBOX_CENTER_X * scaleX;
+    const oCenterY = svgRect.top + O_VIEWBOX_CENTER_Y * scaleY;
+    const oWidth = O_VIEWBOX_WIDTH * scaleX;
+    const oHeight = O_VIEWBOX_HEIGHT * scaleY;
+
+    setOPosition({
+      x: oCenterX,
+      y: oCenterY,
+      width: oWidth,
+      height: oHeight,
+    });
+  }, [setOPosition]);
+
+  // Measure position after render and on resize
+  useEffect(() => {
+    if (!isVisible && isIntroComplete) return;
+
+    // Initial measurement
+    measureOPosition();
+
+    // Re-measure on resize
+    const handleResize = () => {
+      measureOPosition();
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Also use ResizeObserver for more accurate tracking
+    let resizeObserver: ResizeObserver | null = null;
+    if (svgRef.current) {
+      resizeObserver = new ResizeObserver(measureOPosition);
+      resizeObserver.observe(svgRef.current);
+    }
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+    };
+  }, [isVisible, isIntroComplete, measureOPosition, viewport.width, viewport.height]);
 
   // Don't render if not visible
   if (!isVisible && isIntroComplete) {
@@ -188,6 +254,7 @@ export function HeroSection() {
     >
       {/* Main title - SVG with handwriting animation */}
       <OzKeisarText
+        ref={svgRef}
         progress={titleDrawProgress}
         color={toRgbString(colors.textPrimary)}
         width={titleWidth}

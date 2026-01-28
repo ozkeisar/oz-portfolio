@@ -7,20 +7,23 @@ import { ImpactSection } from './components/sections/ImpactSection';
 import { SkillsSection } from './components/sections/SkillsSection';
 import { SummarySection } from './components/sections/SummarySection';
 import { AnimationProvider } from './context/AnimationContext';
+import { HeroOPositionProvider } from './context/HeroOPositionContext';
 import './App.css';
 
 function App() {
   return (
     <AnimationProvider>
-      <AnimationCanvas backgroundColor="#0a1628">
-        <HeroSection />
-        <SummarySection />
-        <ExperienceSection />
-        <ImpactSection />
-        <SkillsSection />
-        <ContactSection />
-        <ProfileImageTransition />
-      </AnimationCanvas>
+      <HeroOPositionProvider>
+        <AnimationCanvas backgroundColor="#0a1628">
+          <HeroSection />
+          <SummarySection />
+          <ExperienceSection />
+          <ImpactSection />
+          <SkillsSection />
+          <ContactSection />
+          <ProfileImageTransition />
+        </AnimationCanvas>
+      </HeroOPositionProvider>
     </AnimationProvider>
   );
 }

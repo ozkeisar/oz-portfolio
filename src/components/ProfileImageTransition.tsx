@@ -1,6 +1,7 @@
 import ozPhoto from '../assets/oz-photo.webp';
 import { FPS } from '../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../context/AnimationContext';
+import { useHeroOPosition } from '../context/HeroOPositionContext';
 import { EXPERIENCE_ITEM_COUNT } from '../data/experienceData';
 import { getTimelineScrollState, getTotalExperienceScroll } from '../hooks/useTimelineScroll';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../hooks/useViewport';
@@ -61,6 +62,10 @@ export function ProfileImageTransition() {
   const impactVisibility = useSectionVisibility('impact');
   const skillsVisibility = useSectionVisibility('skills');
   const contactVisibility = useSectionVisibility('contact');
+
+  // Get measured "O" position from context (set by HeroSection)
+  // Must be called before any early returns (React hooks rules)
+  const { oPosition } = useHeroOPosition();
 
   // Image appearance in the O (after title animation completes during intro)
   const introAppearanceProgress = interpolate(introFrame, [IMAGE_APPEAR_START, IMAGE_APPEAR_END], [0, 1], {
@@ -186,37 +191,52 @@ export function ProfileImageTransition() {
   // Responsive breakpoints (must match SummarySection)
   const isMobile = viewport.width < 768;
 
-  // Responsive title sizing (must match HeroSection exactly)
-  const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
-  const titleHeight = titleWidth * 0.22; // matches OzKeisarText height ratio
+  // Use measured position if available, otherwise calculate fallback
+  // The measured position is much more accurate as it accounts for
+  // actual DOM rendering, safe areas, and browser chrome
+  let heroX: number;
+  let heroY: number;
+  let oWidth: number;
+  let oHeight: number;
 
-  // O letter in viewBox "0 0 320 70":
-  const oViewBoxCenterX = 35;
-  const oViewBoxCenterY = 35;
-  const oViewBoxInnerWidth = 49;
-  const oViewBoxInnerHeight = 53;
+  if (oPosition) {
+    // Use the actual measured position from HeroSection
+    heroX = oPosition.x;
+    heroY = oPosition.y;
+    oWidth = oPosition.width;
+    oHeight = oPosition.height;
+  } else {
+    // Fallback: calculate position (used during first render before measurement)
+    const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
+    const titleHeight = titleWidth * 0.22;
 
-  // Convert to screen coordinates
-  const oScreenCenterX = (oViewBoxCenterX / 320) * titleWidth;
-  const oScreenCenterY = (oViewBoxCenterY / 70) * titleHeight;
-  const oWidth = (oViewBoxInnerWidth / 320) * titleWidth;
-  const oHeight = (oViewBoxInnerHeight / 70) * titleHeight;
+    // O letter in viewBox "0 0 320 70"
+    const oViewBoxCenterX = 35;
+    const oViewBoxCenterY = 35;
+    const oViewBoxInnerWidth = 54;
+    const oViewBoxInnerHeight = 58;
 
-  // Hero position calculations
-  const subtitleFontSize = responsiveFontSize(viewport.width, 16, 22);
-  const subtitleMargin = responsiveSpacing(viewport.width, 16, 24);
-  const subtitleHeight = subtitleFontSize * 1.2;
-  const accentMargin = responsiveSpacing(viewport.width, 24, 40);
-  const accentHeight = 3;
+    const oScreenCenterX = (oViewBoxCenterX / 320) * titleWidth;
+    const oScreenCenterY = (oViewBoxCenterY / 70) * titleHeight;
+    oWidth = (oViewBoxInnerWidth / 320) * titleWidth;
+    oHeight = (oViewBoxInnerHeight / 70) * titleHeight;
 
-  const belowTitleHeight = subtitleMargin + subtitleHeight + accentMargin + accentHeight;
-  const verticalOffset = belowTitleHeight / 2;
+    // Calculate title position (fallback)
+    const subtitleFontSize = responsiveFontSize(viewport.width, 16, 22);
+    const subtitleMargin = responsiveSpacing(viewport.width, 16, 24);
+    const subtitleHeightCalc = subtitleFontSize * 1.2;
+    const accentMargin = responsiveSpacing(viewport.width, 24, 40);
+    const accentHeight = 3;
 
-  const titleLeft = (viewport.width - titleWidth) / 2;
-  const titleTop = (viewport.height - titleHeight) / 2 - verticalOffset;
+    const belowTitleHeight = subtitleMargin + subtitleHeightCalc + accentMargin + accentHeight;
+    const verticalOffset = belowTitleHeight / 2;
 
-  const heroX = titleLeft + oScreenCenterX;
-  const heroY = titleTop + oScreenCenterY;
+    const titleLeft = (viewport.width - titleWidth) / 2;
+    const titleTop = (viewport.height - titleHeight) / 2 - verticalOffset;
+
+    heroX = titleLeft + oScreenCenterX;
+    heroY = titleTop + oScreenCenterY;
+  }
 
   // Summary position - must match SummarySection layout exactly
   // Photo is smaller on mobile
