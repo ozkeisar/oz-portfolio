@@ -540,7 +540,7 @@ export function ContactSection() {
       <p
         style={{
           position: 'absolute',
-          bottom: responsiveSpacing(viewport.width, 16, 32),
+          bottom: `calc(${responsiveSpacing(viewport.width, 16, 32)}px + env(safe-area-inset-bottom, 0px))`,
           margin: 0,
           fontSize: 12,
           color: toRgbString(colors.textMuted),

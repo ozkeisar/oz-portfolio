@@ -293,7 +293,8 @@ export function HeroSection() {
       <div
         style={{
           position: 'absolute',
-          bottom: responsiveSpacing(viewport.width, 40, 60),
+          // Use calc to add safe area inset for devices with home indicators
+          bottom: `calc(${responsiveSpacing(viewport.width, 40, 60)}px + env(safe-area-inset-bottom, 0px))`,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',

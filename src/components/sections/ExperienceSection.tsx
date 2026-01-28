@@ -473,7 +473,7 @@ export function ExperienceSection() {
         <div
           style={{
             position: 'absolute',
-            bottom: verticalPadding,
+            bottom: `calc(${verticalPadding}px + env(safe-area-inset-bottom, 0px))`,
             left: '50%',
             transform: 'translateX(-50%)',
             display: 'flex',
