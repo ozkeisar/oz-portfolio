@@ -1,15 +1,45 @@
 import { motion } from 'framer-motion';
 import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString } from '../../utils/colors';
+import { colors, toRgbString, toRgbaString } from '../../utils/colors';
 import { fadeInUp, staggerContainer, viewportConfig } from '../../lib/animations';
 
-const summaryText = `With 9+ years of full-stack development and engineering leadership experience, I specialize in building high-impact products and teams. Currently leading AI-first development initiatives at Abra, where I've architected solutions for major clients including Leumi Bank, serving 1M+ active users.
+// Highlighted text component
+function Highlight({ text, href }: { text: string; href?: string }) {
+  const style: React.CSSProperties = {
+    color: toRgbString(colors.accent),
+    textDecoration: 'none',
+    fontWeight: 500,
+  };
 
-My approach combines technical excellence with strategic thinking—whether it's building React Native teams from scratch, creating developer tools that reduce integration issues by 40%, or training the next generation of developers through AI-First bootcamps. I thrive at the intersection of cutting-edge technology and practical business outcomes.`;
+  if (href) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" style={style}>
+        {text}
+      </a>
+    );
+  }
+
+  return <span style={style}>{text}</span>;
+}
+
+// Tech stack items
+const techStack = [
+  'TypeScript',
+  'React / React Native',
+  'Node.js',
+  'AI & LLM Integration',
+  'Team Leadership',
+  'System Architecture',
+];
 
 export function HomeSummary() {
   const viewport = useViewport();
   const isMobile = viewport.width < 768;
+  const isTablet = viewport.width >= 768 && viewport.width < 1024;
+
+  const titleSize = responsiveFontSize(viewport.width, 20, 32);
+  const bodySize = responsiveFontSize(viewport.width, 14, 17);
+  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
 
   return (
     <section
@@ -28,56 +58,140 @@ export function HomeSummary() {
         whileInView="visible"
         viewport={viewportConfig}
         style={{
-          maxWidth: 800,
-          textAlign: isMobile ? 'left' : 'center',
+          maxWidth: 600,
+          textAlign: 'left',
         }}
       >
-        {/* Section label */}
-        <motion.span
+        {/* Section number and title with line */}
+        <motion.div
           variants={fadeInUp}
           style={{
-            display: 'inline-block',
-            fontSize: 12,
-            fontWeight: 600,
-            color: toRgbString(colors.accent),
-            textTransform: 'uppercase',
-            letterSpacing: '0.15em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
             marginBottom: responsiveSpacing(viewport.width, 16, 24),
           }}
         >
-          About Me
-        </motion.span>
+          <span
+            style={{
+              fontSize: numberSize + 10,
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+              color: toRgbString(colors.accent),
+              fontWeight: 400,
+            }}
+          >
+            01.
+          </span>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: titleSize,
+              fontWeight: 600,
+              color: toRgbString(colors.textPrimary),
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
+            About Me
+          </h2>
+          <div
+            style={{
+              flex: 1,
+              height: 1,
+              backgroundColor: toRgbaString(colors.textSecondary, 0.3),
+              marginLeft: 16,
+              maxWidth: isTablet ? 120 : 200,
+            }}
+          />
+        </motion.div>
 
-        {/* Heading */}
-        <motion.h2
+        {/* Professional narrative */}
+        <motion.div
           variants={fadeInUp}
           style={{
-            margin: 0,
-            marginBottom: responsiveSpacing(viewport.width, 24, 32),
-            fontSize: responsiveFontSize(viewport.width, 28, 42),
-            fontWeight: 700,
-            color: toRgbString(colors.textPrimary),
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-            lineHeight: 1.2,
-          }}
-        >
-          Building Products & Teams at Scale
-        </motion.h2>
-
-        {/* Summary text */}
-        <motion.p
-          variants={fadeInUp}
-          style={{
-            margin: 0,
-            fontSize: responsiveFontSize(viewport.width, 16, 18),
+            fontSize: bodySize,
+            fontWeight: 400,
             color: toRgbString(colors.textSecondary),
-            fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-            lineHeight: 1.8,
-            whiteSpace: 'pre-line',
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            lineHeight: 1.75,
           }}
         >
-          {summaryText}
-        </motion.p>
+          {/* Paragraph 1 */}
+          <p style={{ margin: 0 }}>
+            Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From{' '}
+            <Highlight text="mission-critical defense systems" /> in the Israeli Air Force to leading development teams at{' '}
+            <Highlight text="Abra" href="https://abra-bm.com" />, I specialize in turning ambitious technical challenges into production-ready solutions.
+          </p>
+
+          {/* Paragraph 2 */}
+          <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
+            Currently directing AI-first development initiatives and managing cross-functional teams delivering{' '}
+            <Highlight text="enterprise banking platforms" /> (1M+ users),{' '}
+            <Highlight text="real-time security systems" />, and{' '}
+            <Highlight text="medical imaging software" />.
+          </p>
+
+          {/* Paragraph 3 */}
+          <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
+            Committed to advancing developer productivity through tooling and methodology. Creator of{' '}
+            <Highlight text="Mockingbird" href="https://github.com/ozkeisar/mockingbird" /> and architect of AI-augmented development workflows adopted across engineering teams.
+          </p>
+        </motion.div>
+
+        {/* Core competencies / Tech stack */}
+        <motion.div
+          variants={fadeInUp}
+          style={{ marginTop: responsiveSpacing(viewport.width, 20, 28) }}
+        >
+          <p
+            style={{
+              margin: 0,
+              marginBottom: responsiveSpacing(viewport.width, 8, 12),
+              fontSize: bodySize - 1,
+              color: toRgbaString(colors.textSecondary, 0.8),
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
+            Core competencies:
+          </p>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '8px 32px',
+              justifyItems: 'start',
+            }}
+          >
+            {techStack.map((tech) => (
+              <div
+                key={tech}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <span
+                  style={{
+                    color: toRgbString(colors.accent),
+                    fontSize: 10,
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  }}
+                >
+                  ▹
+                </span>
+                <span
+                  style={{
+                    fontSize: bodySize - 2,
+                    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                    color: toRgbString(colors.textSecondary),
+                  }}
+                >
+                  {tech}
+                </span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
       </motion.div>
     </section>
   );
