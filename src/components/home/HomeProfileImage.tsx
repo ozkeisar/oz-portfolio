@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
 import { colors, toRgbString } from '../../utils/colors';
@@ -14,6 +15,33 @@ type HomeProfileImageProps = {
 
 export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
   const { oPosition } = useHeroOPosition();
+  const [safeAreaTop, setSafeAreaTop] = useState(0);
+
+  // Get safe area inset for header positioning
+  useEffect(() => {
+    const updateSafeArea = () => {
+      // Get the computed safe area inset
+      const safeArea = parseInt(
+        getComputedStyle(document.documentElement).getPropertyValue('--sat') || '0',
+        10
+      );
+      // Fallback: try to get from env() by measuring a test element
+      if (safeArea === 0) {
+        const testEl = document.createElement('div');
+        testEl.style.paddingTop = 'env(safe-area-inset-top, 0px)';
+        document.body.appendChild(testEl);
+        const computed = getComputedStyle(testEl).paddingTop;
+        setSafeAreaTop(parseInt(computed, 10) || 0);
+        document.body.removeChild(testEl);
+      } else {
+        setSafeAreaTop(safeArea);
+      }
+    };
+
+    updateSafeArea();
+    window.addEventListener('resize', updateSafeArea);
+    return () => window.removeEventListener('resize', updateSafeArea);
+  }, []);
 
   // Don't render until we have the O position
   if (!oPosition) return null;
@@ -30,9 +58,9 @@ export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
   const heroWidth = oPosition.width;
   const heroHeight = oPosition.height;
 
-  // Header icon position (top-left with padding)
+  // Header icon position (top-left with padding, accounting for safe area)
   const headerX = HEADER_PADDING + HEADER_ICON_SIZE / 2;
-  const headerY = HEADER_PADDING + HEADER_ICON_SIZE / 2;
+  const headerY = HEADER_PADDING + HEADER_ICON_SIZE / 2 + safeAreaTop;
 
   // Current target position and dimensions
   // In hero: oval shape (width ≠ height)
