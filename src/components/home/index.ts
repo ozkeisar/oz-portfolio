@@ -1,0 +1,9 @@
+export { HomeEntrance } from './HomeEntrance';
+export { HomeHero } from './HomeHero';
+export { HomeSummary } from './HomeSummary';
+export { HomeExperience } from './HomeExperience';
+export { HomeImpact } from './HomeImpact';
+export { HomeSkills } from './HomeSkills';
+export { HomeContact } from './HomeContact';
+export { HomeHeader } from './HomeHeader';
+export { HomeProfileImage } from './HomeProfileImage';
