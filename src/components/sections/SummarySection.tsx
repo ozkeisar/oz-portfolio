@@ -239,7 +239,10 @@ export function SummarySection() {
   const contentGap = responsiveSpacing(viewport.width, 24, 60);
 
   // Max width for text content - narrower on mobile
-  const textMaxWidth = responsiveValue(viewport.width, 320, 500, 320, 1200);
+  // Ensure it fits within available space
+  const availableWidth = viewport.width - horizontalPadding * 2;
+  const baseTextMaxWidth = responsiveValue(viewport.width, 320, 500, 320, 1200);
+  const textMaxWidth = Math.min(baseTextMaxWidth, availableWidth);
 
   // Content scroll offset - maintain position during exit animation to prevent jump
   // Apply when: CONTENT_SCROLL, active (IDLE with overflow), or exiting forward
@@ -295,14 +298,15 @@ export function SummarySection() {
         flexDirection: isMobile ? 'column' : 'row',
         justifyContent: isMobile ? 'flex-start' : 'center',
         alignItems: 'center',
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
+        paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: isMobile ? viewport.height * 0.15 : verticalPadding,
         paddingBottom: verticalPadding,
         gap: contentGap,
         opacity: exitAnimation.opacity * entranceProgress,
         transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
         overflow: 'hidden', // Clip content that scrolls above
+        boxSizing: 'border-box',
       }}
     >
       {/* Photo spacer - reserves space for ProfileImageTransition (desktop only) */}

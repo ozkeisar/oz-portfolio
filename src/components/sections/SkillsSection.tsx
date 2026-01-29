@@ -189,6 +189,7 @@ export function SkillsSection() {
   const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
+  const availableWidth = viewport.width - horizontalPadding * 2;
 
   // Network layout dimensions - responsive for all screen sizes
   const networkSize = Math.min(
@@ -205,8 +206,9 @@ export function SkillsSection() {
   // Use orbital layout on all screen sizes
   const useMobileLayout = false;
 
-  // Content width
-  const contentMaxWidth = responsiveValue(viewport.width, 350, 800, 320, 1200);
+  // Content width - ensure it fits within available space
+  const baseContentMaxWidth = responsiveValue(viewport.width, 350, 800, 320, 1200);
+  const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
 
   // Header animation
   const headerOpacity = interpolate(phase1Progress, [0, 1], [0, 1]);
@@ -242,13 +244,14 @@ export function SkillsSection() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
+        paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
         opacity: exitAnimation.opacity * Math.min(1, entranceProgress),
         transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
         overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       {/* Section Header */}

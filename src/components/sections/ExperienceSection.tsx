@@ -196,7 +196,12 @@ export function ExperienceSection() {
   const contentGap = responsiveSpacing(viewport.width, 16, 40);
 
   // Content area dimensions
-  const contentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+  // Calculate max content width but ensure it fits within available space
+  const baseContentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+  // Available width after padding (safe area is handled separately in CSS)
+  const availableWidth = viewport.width - horizontalPadding * 2;
+  // Use the smaller of the two to prevent overflow
+  const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
 
   // Mobile image spacer (must match ProfileImageTransition)
   const mobileImageSize = 32;
@@ -325,13 +330,15 @@ export function ExperienceSection() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
+        // Use CSS calc to add safe area insets for devices with notches/rounded corners
+        paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
         opacity: exitAnimation.opacity * entranceProgress,
         transform: `translateX(${exitAnimation.translateX}px) scale(${exitAnimation.scale})`,
         overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       {/* Section Header */}
@@ -342,6 +349,7 @@ export function ExperienceSection() {
           opacity: headerOpacity,
           transform: `translateY(${headerY}px)`,
           marginBottom: responsiveSpacing(viewport.width, 16, 24),
+          boxSizing: 'border-box',
         }}
       >
         <div
@@ -407,6 +415,7 @@ export function ExperienceSection() {
           overflow: 'hidden',
           opacity: contentOpacity,
           transform: `translateY(${contentTranslateY}px) translateX(${contentTranslateX}px)`,
+          boxSizing: 'border-box',
         }}
       >
         {/* Timeline Rail (hidden on mobile) */}
@@ -425,6 +434,7 @@ export function ExperienceSection() {
             display: 'flex',
             flexDirection: 'column',
             overflow: 'visible',
+            minWidth: 0, // Allow flex item to shrink below content size
           }}
         >
           {experienceData.map((item, index) => {

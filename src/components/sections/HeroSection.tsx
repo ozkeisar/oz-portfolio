@@ -247,9 +247,13 @@ export function HeroSection() {
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding,
+        paddingTop: padding,
+        paddingBottom: padding,
+        paddingLeft: `calc(${padding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${padding}px + env(safe-area-inset-right, 0px))`,
         opacity: finalOpacity,
         transform: `translateY(${finalTranslateY}px)`,
+        boxSizing: 'border-box',
       }}
     >
       {/* Main title - SVG with handwriting animation */}

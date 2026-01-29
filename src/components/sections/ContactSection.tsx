@@ -183,7 +183,10 @@ export function ContactSection() {
   const containerOpacity = interpolate(headerProgress, [0, 1], [0, 1]);
 
   // Content max width (matching other sections)
-  const contentMaxWidth = responsiveValue(viewport.width, 350, 700, 320, 1200);
+  // Ensure it fits within available space
+  const availableWidth = viewport.width - horizontalPadding * 2;
+  const baseContentMaxWidth = responsiveValue(viewport.width, 350, 700, 320, 1200);
+  const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
 
   return (
     <div
@@ -193,12 +196,13 @@ export function ContactSection() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
+        paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
         opacity: containerOpacity,
         overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       {/* Section Header */}
@@ -318,7 +322,7 @@ export function ContactSection() {
           flexDirection: 'column',
           gap: cardGap,
           width: '100%',
-          maxWidth: responsiveValue(viewport.width, 320, 700, 320, 1200),
+          maxWidth: contentMaxWidth,
           alignItems: 'center',
         }}
       >

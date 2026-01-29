@@ -119,7 +119,10 @@ export function ImpactSection() {
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
 
   // Content area dimensions (must match ProfileImageTransition)
-  const contentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+  // Calculate max content width but ensure it fits within available space
+  const baseContentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
+  const availableWidth = viewport.width - horizontalPadding * 2;
+  const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
 
   // Mobile image spacer (must match ProfileImageTransition)
   const mobileImageSize = 32;
@@ -165,13 +168,14 @@ export function ImpactSection() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        paddingLeft: horizontalPadding,
-        paddingRight: horizontalPadding,
+        paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
         opacity: sectionOpacity,
         transform: `translateX(${sectionTranslateX}px) scale(${sectionScale})`,
         overflow: 'hidden',
+        boxSizing: 'border-box',
       }}
     >
       {/* Section Header */}

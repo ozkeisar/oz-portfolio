@@ -243,6 +243,10 @@ export const TimelineItem = memo(function TimelineItem({
         transform: shouldMorph ? `scale(${morphScale})` : undefined,
         transformOrigin: shouldMorph ? `${transformOriginXPercent}% ${transformOriginYPercent}%` : undefined,
         opacity: morphOpacity,
+        // Ensure proper sizing on mobile
+        boxSizing: 'border-box',
+        width: '100%',
+        maxWidth: '100%',
       }}
     >
       {/* Header row - transitions from two-line to single-line layout */}
@@ -355,6 +359,8 @@ export const TimelineItem = memo(function TimelineItem({
               fontFamily: 'system-ui, -apple-system, sans-serif',
               lineHeight: 1.6,
               minHeight: isMobile ? 60 : 48,
+              wordBreak: 'break-word',
+              overflowWrap: 'break-word',
             }}
           >
             {visibleDescription}
@@ -370,6 +376,8 @@ export const TimelineItem = memo(function TimelineItem({
                 margin: 0,
                 padding: 0,
                 paddingLeft: 16,
+                wordBreak: 'break-word',
+                overflowWrap: 'break-word',
               }}
             >
               {item.achievements.map((achievement, achievementIndex) => {
