@@ -127,7 +127,10 @@ export function HomeEntrance({ onComplete }: HomeEntranceProps) {
         justifyContent: 'center',
         alignItems: 'center',
         backgroundColor: '#0a1628',
-        padding,
+        paddingLeft: `calc(${padding}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${padding}px + env(safe-area-inset-right, 0px))`,
+        paddingTop: `calc(${padding}px + env(safe-area-inset-top, 0px))`,
+        paddingBottom: `calc(${padding}px + env(safe-area-inset-bottom, 0px))`,
         boxSizing: 'border-box',
       }}
     >
