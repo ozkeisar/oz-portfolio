@@ -91,7 +91,6 @@ export function Home() {
         <main
           style={{
             opacity: phase === 'content' ? 1 : 0,
-            transition: 'opacity 0.5s ease-out',
           }}
         >
           <HomeHero />

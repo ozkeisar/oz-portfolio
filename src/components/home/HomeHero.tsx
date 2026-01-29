@@ -4,7 +4,6 @@ import { useViewport, responsiveValue, responsiveSpacing, responsiveFontSize } f
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';
-import { fadeInUp, staggerContainer, viewportConfig } from '../../lib/animations';
 
 // "O" letter position constants in viewBox coordinates (0 0 320 70)
 // Must match the O path in OzKeisarText: "M8 35 C8 18, 22 6, 35 6 C48 6, 62 18, 62 35..."
@@ -90,11 +89,7 @@ export function HomeHero() {
         position: 'relative',
       }}
     >
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportConfig}
+      <div
         style={{
           display: 'flex',
           flexDirection: 'column',
@@ -102,18 +97,15 @@ export function HomeHero() {
         }}
       >
         {/* Main title - SVG (fully drawn) */}
-        <motion.div variants={fadeInUp}>
-          <OzKeisarText
-            ref={svgRef}
-            progress={1}
-            color={toRgbString(colors.textPrimary)}
-            width={titleWidth}
-          />
-        </motion.div>
+        <OzKeisarText
+          ref={svgRef}
+          progress={1}
+          color={toRgbString(colors.textPrimary)}
+          width={titleWidth}
+        />
 
         {/* Subtitle */}
-        <motion.p
-          variants={fadeInUp}
+        <p
           style={{
             margin: 0,
             marginTop: responsiveSpacing(viewport.width, 16, 24),
@@ -126,11 +118,10 @@ export function HomeHero() {
           }}
         >
           Engineering Manager & AI Innovation Lead
-        </motion.p>
+        </p>
 
         {/* Accent line */}
-        <motion.div
-          variants={fadeInUp}
+        <div
           style={{
             marginTop: responsiveSpacing(viewport.width, 24, 40),
             width: 80,
@@ -139,13 +130,10 @@ export function HomeHero() {
             borderRadius: 2,
           }}
         />
-      </motion.div>
+      </div>
 
       {/* Scroll indicator */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.6 }}
+      <div
         style={{
           position: 'absolute',
           bottom: `calc(${responsiveSpacing(viewport.width, 40, 60)}px + env(safe-area-inset-bottom, 0px))`,
@@ -180,7 +168,7 @@ export function HomeHero() {
         >
           <path d="M12 5v14M19 12l-7 7-7-7" />
         </motion.svg>
-      </motion.div>
+      </div>
     </section>
   );
 }
