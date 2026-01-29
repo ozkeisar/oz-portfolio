@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { HomeEntrance } from '../components/home/HomeEntrance';
 import { HomeHero } from '../components/home/HomeHero';
 import { HomeSummary } from '../components/home/HomeSummary';
@@ -17,8 +17,7 @@ const ENTRANCE_DURATION_MS = 3700; // ~110 frames at 30fps
 
 export function Home() {
   const [phase, setPhase] = useState<AnimationPhase>('entrance');
-  const [heroInView, setHeroInView] = useState(true);
-  const heroRef = useRef<HTMLElement>(null);
+  const [isAtTop, setIsAtTop] = useState(true); // Track if user is at top of page
 
   // Lock scroll during entrance
   useEffect(() => {
@@ -42,19 +41,22 @@ export function Home() {
     }
   }, [phase]);
 
-  // Track hero visibility for header appearance
+  // Track scroll position for profile image transition
+  // Image goes to header on first scroll, returns only when back at top
   useEffect(() => {
-    if (phase !== 'content' || !heroRef.current) return;
+    if (phase !== 'content') return;
 
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        setHeroInView(entry.isIntersecting);
-      },
-      { threshold: 0 }
-    );
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      // Image returns to hero position only when scrolled to the very top
+      setIsAtTop(scrollY === 0);
+    };
 
-    observer.observe(heroRef.current);
-    return () => observer.disconnect();
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    // Initial check
+    handleScroll();
+
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [phase]);
 
   const handleEntranceComplete = useCallback(() => {
@@ -76,13 +78,13 @@ export function Home() {
           <HomeEntrance onComplete={handleEntranceComplete} />
         )}
 
-        {/* Header - only visible after scrolling past hero */}
-        <HomeHeader visible={phase === 'content' && !heroInView} />
+        {/* Header - visible on first scroll, same as profile image */}
+        <HomeHeader visible={phase === 'content' && !isAtTop} />
 
         {/* Profile image that transitions between hero and header */}
         <HomeProfileImage
           phase={phase}
-          heroInView={heroInView}
+          isAtTop={isAtTop}
         />
 
         {/* Main content - visible after entrance */}
@@ -92,7 +94,7 @@ export function Home() {
             transition: 'opacity 0.5s ease-out',
           }}
         >
-          <HomeHero ref={heroRef} />
+          <HomeHero />
           <HomeSummary />
           <HomeExperience />
           <HomeImpact />

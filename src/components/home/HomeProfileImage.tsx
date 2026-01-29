@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
+import { colors, toRgbString } from '../../utils/colors';
 import ozPhoto from '../../assets/oz-photo.webp';
 
 // Header icon position (fixed values)
@@ -8,80 +9,92 @@ const HEADER_ICON_SIZE = 40;
 
 type HomeProfileImageProps = {
   phase: 'entrance' | 'content';
-  heroInView: boolean;
+  isAtTop: boolean;
 };
 
-export function HomeProfileImage({ phase, heroInView }: HomeProfileImageProps) {
+export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
   const { oPosition } = useHeroOPosition();
 
   // Don't render until we have the O position
   if (!oPosition) return null;
 
   // During entrance: position in the O
-  // After entrance with hero in view: position in the O
-  // After scrolling past hero: transition to header icon position
-  const inHeroPosition = phase === 'entrance' || heroInView;
+  // After entrance and at top: position in the O
+  // After ANY scroll: transition to header icon position
+  const inHeroPosition = phase === 'entrance' || isAtTop;
 
-  // Calculate positions
+  // Calculate positions - use actual O dimensions for oval shape
   const heroX = oPosition.x;
   const heroY = oPosition.y;
-  const heroSize = Math.min(oPosition.width, oPosition.height) * 0.85;
+  // Use O dimensions directly (creates the oval/egg shape)
+  const heroWidth = oPosition.width;
+  const heroHeight = oPosition.height;
 
   // Header icon position (top-left with padding)
   const headerX = HEADER_PADDING + HEADER_ICON_SIZE / 2;
   const headerY = HEADER_PADDING + HEADER_ICON_SIZE / 2;
 
-  // Current target position
+  // Current target position and dimensions
+  // In hero: oval shape (width ≠ height)
+  // In header: circle shape (width = height)
   const targetX = inHeroPosition ? heroX : headerX;
   const targetY = inHeroPosition ? heroY : headerY;
-  const targetSize = inHeroPosition ? heroSize : HEADER_ICON_SIZE;
+  const targetWidth = inHeroPosition ? heroWidth : HEADER_ICON_SIZE;
+  const targetHeight = inHeroPosition ? heroHeight : HEADER_ICON_SIZE;
 
-  // Opacity: visible during entrance and when hero is in view, or when header is visible
-  const opacity = phase === 'entrance'
-    ? 1
-    : (heroInView ? 1 : 1); // Always visible, just transitions position
-
-  // Border padding for the white outline
+  // Border padding (grows during transition, matches original)
   const borderPadding = inHeroPosition ? 3 : 2;
+
+  // Shadow opacity (subtle in hero, more visible in header)
+  const shadowOpacity = inHeroPosition ? 0.1 : 0.25;
 
   return (
     <motion.div
       style={{
         position: 'fixed',
-        zIndex: inHeroPosition ? 101 : 51, // Above entrance during entrance, below header otherwise
+        zIndex: inHeroPosition ? 101 : 51,
         pointerEvents: 'none',
-        borderRadius: '50%',
-        backgroundColor: 'white', // White border
+        backgroundColor: toRgbString(colors.textPrimary), // White border
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.3)',
+        overflow: 'hidden',
       }}
       initial={false}
       animate={{
         left: targetX,
         top: targetY,
-        width: targetSize + borderPadding * 2,
-        height: targetSize + borderPadding * 2,
+        width: targetWidth + borderPadding * 2,
+        height: targetHeight + borderPadding * 2,
+        borderRadius: '50%', // 50% makes oval when width ≠ height, circle when equal
         x: '-50%',
         y: '-50%',
-        opacity,
+        boxShadow: `0 10px 40px rgba(0, 0, 0, ${shadowOpacity})`,
       }}
       transition={{
         type: 'spring',
-        damping: 20,
-        stiffness: 100,
+        damping: 18,
+        stiffness: 40, // Slow, smooth spring to match original wrap transition
         mass: 1,
       }}
     >
-      <img
+      <motion.img
         src={ozPhoto}
         alt="Oz Keisar"
         style={{
-          width: targetSize,
-          height: targetSize,
-          borderRadius: '50%',
           objectFit: 'cover',
+        }}
+        initial={false}
+        animate={{
+          width: targetWidth,
+          height: targetHeight,
+          borderRadius: '50%',
+        }}
+        transition={{
+          type: 'spring',
+          damping: 18,
+          stiffness: 40,
+          mass: 1,
         }}
       />
     </motion.div>

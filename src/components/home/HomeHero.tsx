@@ -1,11 +1,10 @@
-import { forwardRef } from 'react';
 import { motion } from 'framer-motion';
 import { useViewport, responsiveValue, responsiveSpacing, responsiveFontSize } from '../../hooks/useViewport';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';
 import { fadeInUp, staggerContainer, viewportConfig } from '../../lib/animations';
 
-export const HomeHero = forwardRef<HTMLElement>(function HomeHero(_props, ref) {
+export function HomeHero() {
   const viewport = useViewport();
 
   const titleWidth = responsiveValue(viewport.width, 280, 600, 320, 1200);
@@ -13,7 +12,6 @@ export const HomeHero = forwardRef<HTMLElement>(function HomeHero(_props, ref) {
 
   return (
     <section
-      ref={ref}
       id="hero"
       style={{
         minHeight: '100vh',
@@ -120,4 +118,4 @@ export const HomeHero = forwardRef<HTMLElement>(function HomeHero(_props, ref) {
       </motion.div>
     </section>
   );
-});
+}
