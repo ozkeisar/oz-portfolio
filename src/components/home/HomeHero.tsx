@@ -75,12 +75,12 @@ export function HomeHero() {
     <section
       id="hero"
       style={{
-        minHeight: '100vh',
+        height: viewport.height,
+        minHeight: viewport.height,
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        padding,
         paddingLeft: `calc(${padding}px + env(safe-area-inset-left, 0px))`,
         paddingRight: `calc(${padding}px + env(safe-area-inset-right, 0px))`,
         paddingTop: `calc(${padding}px + env(safe-area-inset-top, 0px))`,
