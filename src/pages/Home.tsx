@@ -9,6 +9,7 @@ import { HomeContact } from '../components/home/HomeContact';
 import { HomeHeader } from '../components/home/HomeHeader';
 import { HomeProfileImage } from '../components/home/HomeProfileImage';
 import { HeroOPositionProvider } from '../context/HeroOPositionContext';
+import ozPhoto from '../assets/oz-photo.webp';
 import '../styles/home.css';
 
 type AnimationPhase = 'entrance' | 'content';
@@ -19,7 +20,8 @@ const IMAGE_APPEAR_DELAY_MS = 2500; // Frame 75 at 30fps - syncs with subtitle
 export function Home() {
   const [phase, setPhase] = useState<AnimationPhase>('entrance');
   const [isAtTop, setIsAtTop] = useState(true); // Track if user is at top of page
-  const [showImage, setShowImage] = useState(false); // Track when to show profile image
+  const [imageTimerReady, setImageTimerReady] = useState(false); // Timer elapsed
+  const [imageLoaded, setImageLoaded] = useState(false); // Image preloaded
 
   // Lock scroll during entrance
   useEffect(() => {
@@ -43,15 +45,25 @@ export function Home() {
     }
   }, [phase]);
 
-  // Show profile image synced with subtitle appearance
+  // Preload profile image immediately (doesn't block animation)
   useEffect(() => {
-    if (phase === 'entrance' && !showImage) {
+    const img = new Image();
+    img.onload = () => setImageLoaded(true);
+    img.src = ozPhoto;
+  }, []);
+
+  // Timer for when image should appear (synced with subtitle)
+  useEffect(() => {
+    if (phase === 'entrance' && !imageTimerReady) {
       const timer = setTimeout(() => {
-        setShowImage(true);
+        setImageTimerReady(true);
       }, IMAGE_APPEAR_DELAY_MS);
       return () => clearTimeout(timer);
     }
-  }, [phase, showImage]);
+  }, [phase, imageTimerReady]);
+
+  // Show image only when both timer elapsed AND image is loaded
+  const showImage = imageTimerReady && imageLoaded;
 
   // Track scroll position for profile image transition
   // Image goes to header on first scroll, returns only when back at top
