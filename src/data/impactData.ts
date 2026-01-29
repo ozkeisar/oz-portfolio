@@ -48,14 +48,6 @@ export const impactMetrics: ImpactMetric[] = [
     icon: 'folder',
   },
   {
-    id: 'team',
-    value: 5,
-    suffix: '',
-    label: 'Developers Hired',
-    subLabel: 'Leumi React Native',
-    icon: 'person-plus',
-  },
-  {
     id: 'trained',
     value: 12,
     suffix: '',
