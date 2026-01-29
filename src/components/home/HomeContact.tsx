@@ -1,10 +1,10 @@
-import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString, toRgbaString } from '../../utils/colors';
-import { LinkedInIcon } from '../icons/LinkedInIcon';
-import { GitHubIcon } from '../icons/GitHubIcon';
+import { useRef } from 'react';
+import { responsiveFontSize, responsiveSpacing, useViewport } from '../../hooks/useViewport';
+import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 import { EmailIcon } from '../icons/EmailIcon';
+import { GitHubIcon } from '../icons/GitHubIcon';
+import { LinkedInIcon } from '../icons/LinkedInIcon';
 import { PhoneIcon } from '../icons/PhoneIcon';
 import { WhatsAppIcon } from '../icons/WhatsAppIcon';
 
@@ -239,11 +239,7 @@ export function HomeContact() {
               fontFamily: 'system-ui, -apple-system, sans-serif',
             }}
           >
-            <TypewriterText
-              text={invitationText2}
-              delay={invitation2Delay}
-              isInView={isInView}
-            />
+            <TypewriterText text={invitationText2} delay={invitation2Delay} isInView={isInView} />
           </p>
         </motion.div>
 
@@ -275,10 +271,18 @@ export function HomeContact() {
                 <motion.a
                   key={contact.type}
                   href={contact.href}
-                  target={contact.type !== 'email' && contact.type !== 'phone' ? '_blank' : undefined}
-                  rel={contact.type !== 'email' && contact.type !== 'phone' ? 'noopener noreferrer' : undefined}
+                  target={
+                    contact.type !== 'email' && contact.type !== 'phone' ? '_blank' : undefined
+                  }
+                  rel={
+                    contact.type !== 'email' && contact.type !== 'phone'
+                      ? 'noopener noreferrer'
+                      : undefined
+                  }
                   initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.9 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.9 }
+                  }
                   transition={{ duration: 0.25, delay: cardDelay }}
                   whileHover={{ scale: 1.02, borderColor: toRgbaString(colors.accent, 0.4) }}
                   whileTap={{ scale: 0.98 }}
@@ -362,7 +366,9 @@ export function HomeContact() {
                   target="_blank"
                   rel="noopener noreferrer"
                   initial={{ opacity: 0, y: 20, scale: 0.9 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.9 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.9 }
+                  }
                   transition={{ duration: 0.25, delay: cardDelay }}
                   whileHover={{ scale: 1.02, borderColor: toRgbaString(colors.accent, 0.4) }}
                   whileTap={{ scale: 0.98 }}

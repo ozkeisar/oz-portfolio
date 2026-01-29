@@ -1,6 +1,11 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
-import { useViewport, responsiveValue, responsiveSpacing, responsiveFontSize } from '../../hooks/useViewport';
+import {
+  responsiveFontSize,
+  responsiveSpacing,
+  responsiveValue,
+  useViewport,
+} from '../../hooks/useViewport';
 import { interpolate, spring } from '../../utils/animation';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';

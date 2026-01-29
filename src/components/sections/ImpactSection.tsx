@@ -43,9 +43,6 @@ export function ImpactSection() {
   const isExitingForward = isExiting && direction === 'forward';
   const isExitingBackward = isExiting && direction === 'backward';
 
-  // Responsive breakpoints
-  const isMobile = viewport.width < 768;
-
   // ===========================================
   // Unified animation logic
   // ===========================================
@@ -112,9 +109,9 @@ export function ImpactSection() {
     extrapolateRight: 'clamp',
   });
 
-  // Responsive values
+  // Responsive values - desktop only
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const numberSize = responsiveFontSize(viewport.width, 15, 20);
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
 
@@ -124,10 +121,8 @@ export function ImpactSection() {
   const availableWidth = viewport.width - horizontalPadding * 2;
   const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
 
-  // Mobile image spacer (must match ProfileImageTransition)
-  const mobileImageSize = 32;
-  const desktopImageSize = 40;
-  const imageSize = isMobile ? mobileImageSize : desktopImageSize;
+  // Image spacer (must match ProfileImageTransition) - desktop size
+  const imageSize = 40;
 
   // Calculate image spacer progress for header
   let imageSpacerProgress = 0;

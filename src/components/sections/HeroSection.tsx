@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { INTRO_DURATION_FRAMES, FPS } from '../../config/sections';
+import { FPS, INTRO_DURATION_FRAMES } from '../../config/sections';
 import { useAnimationContext, useSectionVisibility } from '../../context/AnimationContext';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
 import { responsiveFontSize, responsiveSpacing, responsiveValue } from '../../hooks/useViewport';
@@ -154,10 +154,15 @@ export function HeroSection() {
 
   if (isAnimatingExit) {
     // Exit: linear interpolation for smooth reverse
-    const subtitleProgress = interpolate(effectiveFrame, [SUBTITLE_START, SUBTITLE_START + 20], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
+    const subtitleProgress = interpolate(
+      effectiveFrame,
+      [SUBTITLE_START, SUBTITLE_START + 20],
+      [0, 1],
+      {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      }
+    );
     subtitleOpacity = subtitleProgress;
     subtitleY = interpolate(subtitleProgress, [0, 1], [20, 0]);
   } else {
@@ -177,10 +182,15 @@ export function HeroSection() {
 
   if (isAnimatingExit) {
     // Exit: linear interpolation
-    const accentProgress = interpolate(effectiveFrame, [ACCENT_LINE_START, ACCENT_LINE_START + 15], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
+    const accentProgress = interpolate(
+      effectiveFrame,
+      [ACCENT_LINE_START, ACCENT_LINE_START + 15],
+      [0, 1],
+      {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      }
+    );
     accentLineWidth = interpolate(accentProgress, [0, 1], [0, 80]);
     accentLineOpacity = accentProgress;
   } else {
@@ -201,10 +211,15 @@ export function HeroSection() {
 
   if (isAnimatingExit) {
     // Exit: linear interpolation
-    scrollIndicatorProgress = interpolate(effectiveFrame, [SCROLL_INDICATOR_START, SCROLL_INDICATOR_START + 10], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
+    scrollIndicatorProgress = interpolate(
+      effectiveFrame,
+      [SCROLL_INDICATOR_START, SCROLL_INDICATOR_START + 10],
+      [0, 1],
+      {
+        extrapolateLeft: 'clamp',
+        extrapolateRight: 'clamp',
+      }
+    );
     scrollIndicatorOpacity = scrollIndicatorProgress;
     scrollIndicatorY = interpolate(scrollIndicatorProgress, [0, 1], [20, 0]);
   } else {

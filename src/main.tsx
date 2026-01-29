@@ -10,8 +10,4 @@ const isMobile = window.innerWidth < 768;
 const root = document.getElementById('root');
 if (!root) throw new Error('Root element not found');
 
-createRoot(root).render(
-  <StrictMode>
-    {isMobile ? <Home /> : <App />}
-  </StrictMode>
-);
+createRoot(root).render(<StrictMode>{isMobile ? <Home /> : <App />}</StrictMode>);

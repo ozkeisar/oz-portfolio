@@ -25,35 +25,37 @@ function artistEase(t: number): number {
  *
  * Forwards ref to the SVG element for position measurement
  */
-export const OzKeisarText = forwardRef<SVGSVGElement, OzKeisarTextProps>(
-  function OzKeisarText({ progress, color, width }, ref) {
-    const height = width * 0.22;
-    const totalLength = 600;
+export const OzKeisarText = forwardRef<SVGSVGElement, OzKeisarTextProps>(function OzKeisarText(
+  { progress, color, width },
+  ref
+) {
+  const height = width * 0.22;
+  const totalLength = 600;
 
-    // Staggered animation for each letter with artist-like timing
-    // Includes small "pauses" between letters (gaps in timing ranges)
-    const getLetterDashOffset = (letterStart: number, letterEnd: number) => {
-      const letterProgress = interpolate(progress, [letterStart, letterEnd], [0, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      // Apply artist easing for natural brush movement
-      const eased = artistEase(letterProgress);
-      return interpolate(eased, [0, 1], [totalLength, 0]);
-    };
+  // Staggered animation for each letter with artist-like timing
+  // Includes small "pauses" between letters (gaps in timing ranges)
+  const getLetterDashOffset = (letterStart: number, letterEnd: number) => {
+    const letterProgress = interpolate(progress, [letterStart, letterEnd], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
+    // Apply artist easing for natural brush movement
+    const eased = artistEase(letterProgress);
+    return interpolate(eased, [0, 1], [totalLength, 0]);
+  };
 
-    // O no longer has fill - profile image will show through
+  // O no longer has fill - profile image will show through
 
-    return (
-      <svg
-        ref={ref}
-        width={width}
-        height={height}
-        viewBox="0 0 320 70"
-        fill="none"
-        role="img"
-        aria-label="Oz Keisar"
-      >
+  return (
+    <svg
+      ref={ref}
+      width={width}
+      height={height}
+      viewBox="0 0 320 70"
+      fill="none"
+      role="img"
+      aria-label="Oz Keisar"
+    >
       <title>Oz Keisar</title>
 
       {/* O - smooth oval (no fill - profile image shows through) */}
@@ -193,5 +195,4 @@ export const OzKeisarText = forwardRef<SVGSVGElement, OzKeisarTextProps>(
       />
     </svg>
   );
-  }
-);
+});

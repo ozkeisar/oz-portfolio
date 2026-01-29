@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { useEffect, useState } from 'react';
+import ozPhoto from '../../assets/oz-photo.webp';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
 import { colors, toRgbString } from '../../utils/colors';
-import ozPhoto from '../../assets/oz-photo.webp';
 
 // Header icon position (fixed values)
 const HEADER_PADDING = 16;

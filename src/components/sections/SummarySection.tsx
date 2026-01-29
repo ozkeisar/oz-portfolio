@@ -88,22 +88,12 @@ export function SummarySection() {
   // Ref to measure content height
   const contentRef = useRef<HTMLDivElement>(null);
 
-  // Responsive breakpoints (defined early for use in useEffect)
-  const isMobile = viewport.width < 768;
+  // Photo size (must match ProfileImageTransition) - desktop only
+  const photoSize = responsiveFontSize(viewport.width, 160, 200);
 
-  // Photo size (must match ProfileImageTransition)
-  const photoSize = isMobile
-    ? responsiveFontSize(viewport.width, 80, 100)
-    : responsiveFontSize(viewport.width, 160, 200);
-
-  // Calculate available height for content
-  // Mobile: viewport minus image area at top
-  // Desktop: viewport minus vertical padding (content is centered)
+  // Calculate available height for content - desktop only
   const verticalPaddingDesktop = responsiveSpacing(viewport.width, 20, 40) * 2; // top + bottom
-  const mobileImageAreaHeight = viewport.height * 0.12 + photoSize + 24;
-  const availableHeight = isMobile
-    ? viewport.height - mobileImageAreaHeight - 40 // 40px bottom padding
-    : viewport.height - verticalPaddingDesktop - 40; // Account for padding and some margin
+  const availableHeight = viewport.height - verticalPaddingDesktop - 40; // Account for padding and some margin
 
   // Measure content and set maxContentScroll when in CONTENT_SCROLL state
   // At this point the entrance animation is complete and all text is visible
@@ -120,8 +110,7 @@ export function SummarySection() {
       // Only enable content scroll if there's significant overflow (more than 20px)
       if (overflow > 20) {
         // Add extra scroll room at bottom for better readability
-        // Less on mobile to prevent header from scrolling off screen
-        const extraScrollRoom = isMobile ? overflow * 0.1 : availableHeight * 0.25;
+        const extraScrollRoom = availableHeight * 0.25;
         setMaxContentScroll(overflow + extraScrollRoom);
       } else {
         setMaxContentScroll(0);
@@ -129,7 +118,7 @@ export function SummarySection() {
     }, 50);
 
     return () => clearTimeout(timeoutId);
-  }, [isActive, availableHeight, setMaxContentScroll, isMobile]);
+  }, [isActive, availableHeight, setMaxContentScroll]);
 
   // Reset scroll when section is no longer visible
   useEffect(() => {
@@ -222,14 +211,13 @@ export function SummarySection() {
   // Typewriter timing - starts after entrance animations settle
   const typewriterStartFrame = 25;
 
-  // Responsive breakpoints (isMobile and photoSize already defined above for useEffect)
+  // Responsive breakpoints - desktop only
   const isTablet = viewport.width >= 768 && viewport.width < 1024;
 
-  // Responsive values - more nuanced for different screens
+  // Responsive values - desktop range
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
   const bodySize = responsiveFontSize(viewport.width, 14, 17);
-  // Number size matches title size on mobile, smaller on desktop
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const numberSize = responsiveFontSize(viewport.width, 15, 20);
 
   // Padding adjusts for screen size
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
@@ -248,32 +236,6 @@ export function SummarySection() {
   // Apply when: CONTENT_SCROLL, active (IDLE with overflow), or exiting forward
   const scrollY =
     state === 'CONTENT_SCROLL' || isActive || isExitingForward ? contentScrollOffset : 0;
-
-  // Mobile scroll progress for image spacer in section header (must match ProfileImageTransition)
-  // Using small threshold (20px) for fast but smooth transition before exit can start
-  const scrollMoveThreshold = 20;
-  const baseScrollProgress = interpolate(contentScrollOffset, [0, scrollMoveThreshold], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  let mobileScrollProgress = 0;
-  if (isMobile) {
-    if (state === 'CONTENT_SCROLL' || isExitingForward) {
-      // Maintain scroll progress during content scroll and exit animation
-      mobileScrollProgress = baseScrollProgress;
-    } else if (isReversing) {
-      // Animate spacer back to 0 during reverse transition
-      const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      mobileScrollProgress = baseScrollProgress * (1 - reverseAnimationProgress);
-    }
-  }
-
-  const mobileScrolledImageSize = 32; // Must match ProfileImageTransition
-  const imageSpacerWidth = mobileScrollProgress * (mobileScrolledImageSize + 8); // image + gap
 
   // Tech stack items
   const techStack = [
@@ -295,12 +257,12 @@ export function SummarySection() {
         position: 'absolute',
         inset: 0,
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
-        justifyContent: isMobile ? 'flex-start' : 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
         alignItems: 'center',
         paddingLeft: `calc(${horizontalPadding}px + env(safe-area-inset-left, 0px))`,
         paddingRight: `calc(${horizontalPadding}px + env(safe-area-inset-right, 0px))`,
-        paddingTop: isMobile ? viewport.height * 0.15 : verticalPadding,
+        paddingTop: verticalPadding,
         paddingBottom: verticalPadding,
         gap: contentGap,
         opacity: exitAnimation.opacity * entranceProgress,
@@ -309,16 +271,14 @@ export function SummarySection() {
         boxSizing: 'border-box',
       }}
     >
-      {/* Photo spacer - reserves space for ProfileImageTransition (desktop only) */}
-      {!isMobile && (
-        <div
-          style={{
-            flexShrink: 0,
-            width: photoSize,
-            height: photoSize,
-          }}
-        />
-      )}
+      {/* Photo spacer - reserves space for ProfileImageTransition */}
+      <div
+        style={{
+          flexShrink: 0,
+          width: photoSize,
+          height: photoSize,
+        }}
+      />
 
       {/* Text content - scrolls on small screens */}
       <div
@@ -342,16 +302,6 @@ export function SummarySection() {
             justifyContent: 'flex-start',
           }}
         >
-          {/* Dynamic spacer for profile image on mobile - expands as image moves in */}
-          {isMobile && imageSpacerWidth > 0 && (
-            <div
-              style={{
-                width: imageSpacerWidth,
-                height: mobileScrolledImageSize,
-                flexShrink: 0,
-              }}
-            />
-          )}
           <span
             style={{
               fontSize: numberSize + 10,
@@ -648,7 +598,7 @@ export function SummarySection() {
                           alignItems: 'center',
                           gap: 8,
                           opacity: interpolate(techProgress, [0, 1], [0, 1]),
-                          transform: `translateX(${interpolate(techProgress, [0, 1], [isMobile ? 0 : -10, 0])}px)`,
+                          transform: `translateX(${interpolate(techProgress, [0, 1], [-10, 0])}px)`,
                         }}
                       >
                         <span

@@ -63,7 +63,8 @@ export function useSectionVisibility(sectionId: SectionId): {
   /** True when exiting via wrap transition */
   isExitingToWrap: boolean;
 } {
-  const { state, direction, isCurrentSection, isPreviousSection, isWrapping } = useAnimationContext();
+  const { state, direction, isCurrentSection, isPreviousSection, isWrapping } =
+    useAnimationContext();
 
   const isCurrent = isCurrentSection(sectionId);
   const isPrevious = isPreviousSection(sectionId);

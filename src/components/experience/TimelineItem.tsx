@@ -37,8 +37,6 @@ export const TimelineItem = memo(function TimelineItem({
     return null;
   }
 
-  const isMobile = viewport.width < 768;
-
   // Morph animation for expanding items (circle → rectangle reveal)
   // Only applies when useMorphAnimation is true and state is 'expanding'
   const shouldMorph = useMorphAnimation && state === 'expanding';
@@ -163,7 +161,8 @@ export const TimelineItem = memo(function TimelineItem({
 
   // Calculate progress thresholds
   const descriptionEndProgress = descriptionLength / totalContentLength;
-  const achievementsEndProgress = (descriptionLength + achievementsTotalLength) / totalContentLength;
+  const achievementsEndProgress =
+    (descriptionLength + achievementsTotalLength) / totalContentLength;
 
   // Description typewriter
   const descriptionProgress = Math.min(1, typewriterProgress / descriptionEndProgress);
@@ -172,13 +171,18 @@ export const TimelineItem = memo(function TimelineItem({
   const isDescriptionComplete = descriptionProgress >= 1;
 
   // Achievements typewriter (starts after description)
-  const achievementsRawProgress = Math.max(0, (typewriterProgress - descriptionEndProgress) / (achievementsEndProgress - descriptionEndProgress));
+  const achievementsRawProgress = Math.max(
+    0,
+    (typewriterProgress - descriptionEndProgress) /
+      (achievementsEndProgress - descriptionEndProgress)
+  );
   const achievementsProgress = Math.min(1, achievementsRawProgress);
 
   // Technologies typewriter (starts after achievements)
-  const technologiesProgress = achievementsTotalLength > 0
-    ? Math.max(0, (typewriterProgress - achievementsEndProgress) / (1 - achievementsEndProgress))
-    : Math.max(0, (typewriterProgress - descriptionEndProgress) / (1 - descriptionEndProgress));
+  const technologiesProgress =
+    achievementsTotalLength > 0
+      ? Math.max(0, (typewriterProgress - achievementsEndProgress) / (1 - achievementsEndProgress))
+      : Math.max(0, (typewriterProgress - descriptionEndProgress) / (1 - descriptionEndProgress));
 
   // Calculate visible characters for each achievement
   const getVisibleAchievementText = (achievement: string, index: number) => {
@@ -241,7 +245,9 @@ export const TimelineItem = memo(function TimelineItem({
         flexDirection: 'column',
         // Morph animation properties
         transform: shouldMorph ? `scale(${morphScale})` : undefined,
-        transformOrigin: shouldMorph ? `${transformOriginXPercent}% ${transformOriginYPercent}%` : undefined,
+        transformOrigin: shouldMorph
+          ? `${transformOriginXPercent}% ${transformOriginYPercent}%`
+          : undefined,
         opacity: morphOpacity,
         // Ensure proper sizing on mobile
         boxSizing: 'border-box',
@@ -358,15 +364,13 @@ export const TimelineItem = memo(function TimelineItem({
               color: toRgbString(colors.textSecondary),
               fontFamily: 'system-ui, -apple-system, sans-serif',
               lineHeight: 1.6,
-              minHeight: isMobile ? 60 : 48,
+              minHeight: 48,
               wordBreak: 'break-word',
               overflowWrap: 'break-word',
             }}
           >
             {visibleDescription}
-            {showCursor && !isDescriptionComplete && (
-              <span style={{ opacity: 0.7 }}>|</span>
-            )}
+            {showCursor && !isDescriptionComplete && <span style={{ opacity: 0.7 }}>|</span>}
           </p>
 
           {/* Achievements with typewriter effect */}
@@ -386,7 +390,10 @@ export const TimelineItem = memo(function TimelineItem({
 
                 const isLastVisibleAchievement =
                   achievementIndex === item.achievements!.length - 1 ||
-                  getVisibleAchievementText(item.achievements![achievementIndex + 1], achievementIndex + 1).length === 0;
+                  getVisibleAchievementText(
+                    item.achievements![achievementIndex + 1],
+                    achievementIndex + 1
+                  ).length === 0;
                 const isAchievementComplete = visibleText.length === achievement.length;
 
                 return (

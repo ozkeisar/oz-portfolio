@@ -1,9 +1,9 @@
-export { HomeEntrance } from './HomeEntrance';
-export { HomeHero } from './HomeHero';
-export { HomeSummary } from './HomeSummary';
-export { HomeExperience } from './HomeExperience';
-export { HomeImpact } from './HomeImpact';
-export { HomeSkills } from './HomeSkills';
 export { HomeContact } from './HomeContact';
+export { HomeEntrance } from './HomeEntrance';
+export { HomeExperience } from './HomeExperience';
 export { HomeHeader } from './HomeHeader';
+export { HomeHero } from './HomeHero';
+export { HomeImpact } from './HomeImpact';
 export { HomeProfileImage } from './HomeProfileImage';
+export { HomeSkills } from './HomeSkills';
+export { HomeSummary } from './HomeSummary';

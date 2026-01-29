@@ -1,8 +1,8 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
-import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString, toRgbaString } from '../../utils/colors';
 import { experienceData } from '../../data/experienceData';
+import { responsiveFontSize, responsiveSpacing, useViewport } from '../../hooks/useViewport';
+import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 
 // Typewriter text component using Framer Motion
 function TypewriterText({
@@ -164,9 +164,10 @@ export function HomeExperience() {
                   flexDirection: isMobile ? 'column' : 'row',
                   gap: responsiveSpacing(viewport.width, 12, 20),
                   paddingBottom: responsiveSpacing(viewport.width, 20, 28),
-                  borderBottom: index < experienceData.length - 1
-                    ? `1px solid ${toRgbaString(colors.textSecondary, 0.15)}`
-                    : 'none',
+                  borderBottom:
+                    index < experienceData.length - 1
+                      ? `1px solid ${toRgbaString(colors.textSecondary, 0.15)}`
+                      : 'none',
                 }}
               >
                 {/* Period */}
@@ -217,11 +218,7 @@ export function HomeExperience() {
                       fontFamily: 'system-ui, -apple-system, sans-serif',
                     }}
                   >
-                    <TypewriterText
-                      text={companyText}
-                      delay={companyDelay}
-                      isInView={isInView}
-                    />
+                    <TypewriterText text={companyText} delay={companyDelay} isInView={isInView} />
                   </p>
 
                   {/* Description */}

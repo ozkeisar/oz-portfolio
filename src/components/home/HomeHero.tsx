@@ -1,7 +1,12 @@
-import { useRef, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { useViewport, responsiveValue, responsiveSpacing, responsiveFontSize } from '../../hooks/useViewport';
+import { useCallback, useEffect, useRef } from 'react';
 import { useHeroOPosition } from '../../context/HeroOPositionContext';
+import {
+  responsiveFontSize,
+  responsiveSpacing,
+  responsiveValue,
+  useViewport,
+} from '../../hooks/useViewport';
 import { colors, toRgbString } from '../../utils/colors';
 import { OzKeisarText } from '../text/OzKeisarText';
 

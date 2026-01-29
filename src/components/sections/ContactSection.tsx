@@ -70,8 +70,15 @@ const WRAP_ENTRANCE_DURATION = 45; // Entrance from hero wrap (1.5 seconds) - sy
 
 export function ContactSection() {
   const { sequenceFrame, direction, viewport } = useAnimationContext();
-  const { isVisible, isExiting, isReversing, isEntering, isEnteringBackward, isEnteringFromWrap, isExitingToWrap } =
-    useSectionVisibility('contact');
+  const {
+    isVisible,
+    isExiting,
+    isReversing,
+    isEntering,
+    isEnteringBackward,
+    isEnteringFromWrap,
+    isExitingToWrap,
+  } = useSectionVisibility('contact');
 
   // Wrap transition states
   const isExitingToHeroWrap = isExitingToWrap && direction === 'forward';
@@ -88,10 +95,7 @@ export function ContactSection() {
 
   if (isExitingToHeroWrap) {
     // Exiting forward via wrap to hero - animated exit
-    effectiveFrame = Math.max(
-      0,
-      CONTACT_ENTER_DURATION * (1 - sequenceFrame / WRAP_EXIT_DURATION)
-    );
+    effectiveFrame = Math.max(0, CONTACT_ENTER_DURATION * (1 - sequenceFrame / WRAP_EXIT_DURATION));
   } else if (isReversing || isExitingForward) {
     // Reverse: 180 → 0
     effectiveFrame = Math.max(
@@ -123,13 +127,12 @@ export function ContactSection() {
     effectiveFrame = CONTACT_ENTER_DURATION;
   }
 
-  // Responsive breakpoints
-  const isMobile = viewport.width < 768;
+  // Responsive breakpoints (desktop only - tablet affects header line width)
   const isTablet = viewport.width >= 768 && viewport.width < 1024;
 
   // Responsive values
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const numberSize = responsiveFontSize(viewport.width, 15, 20);
   const invitationSize = responsiveFontSize(viewport.width, 18, 28);
   const cardLabelSize = responsiveFontSize(viewport.width, 12, 14);
   const cardValueSize = responsiveFontSize(viewport.width, 11, 13);
@@ -271,8 +274,8 @@ export function ContactSection() {
         {/* Image spacer - reserves space for ProfileImageTransition */}
         <div
           style={{
-            width: isMobile ? 50 : 70,
-            height: isMobile ? 50 : 70,
+            width: 70,
+            height: 70,
             marginBottom: responsiveSpacing(viewport.width, 16, 24),
             opacity: invitationOpacity,
             transform: `scale(${invitationScale})`,
@@ -289,255 +292,256 @@ export function ContactSection() {
           }}
         >
           <p
-          style={{
-            margin: 0,
-            fontSize: invitationSize,
-            fontWeight: 500,
-            color: toRgbString(colors.textPrimary),
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            lineHeight: 1.4,
-            textShadow: `0 0 ${20 * glowPulse}px ${toRgbaString(colors.accent, 0.3 * glowPulse)}`,
-          }}
-        >
-          Ready to Build Something Great?
-        </p>
-        <p
-          style={{
-            margin: 0,
-            marginTop: 8,
-            fontSize: responsiveFontSize(viewport.width, 14, 16),
-            fontWeight: 400,
-            color: toRgbString(colors.textSecondary),
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-          }}
-        >
-          I'm always open to new opportunities and collaborations
-        </p>
-      </div>
+            style={{
+              margin: 0,
+              fontSize: invitationSize,
+              fontWeight: 500,
+              color: toRgbString(colors.textPrimary),
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+              lineHeight: 1.4,
+              textShadow: `0 0 ${20 * glowPulse}px ${toRgbaString(colors.accent, 0.3 * glowPulse)}`,
+            }}
+          >
+            Ready to Build Something Great?
+          </p>
+          <p
+            style={{
+              margin: 0,
+              marginTop: 8,
+              fontSize: responsiveFontSize(viewport.width, 14, 16),
+              fontWeight: 400,
+              color: toRgbString(colors.textSecondary),
+              fontFamily: 'system-ui, -apple-system, sans-serif',
+            }}
+          >
+            I'm always open to new opportunities and collaborations
+          </p>
+        </div>
 
-      {/* Contact Cards Grid */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: cardGap,
-          width: '100%',
-          maxWidth: contentMaxWidth,
-          alignItems: 'center',
-        }}
-      >
-        {/* Primary Row: Email, Phone, WhatsApp */}
+        {/* Contact Cards Grid */}
         <div
           style={{
             display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
+            flexDirection: 'column',
             gap: cardGap,
             width: '100%',
-            justifyContent: 'center',
+            maxWidth: contentMaxWidth,
+            alignItems: 'center',
           }}
         >
-          {primaryContacts.map((contact, index) => {
-            const cardStartFrame = 40 + index * 15;
-            const cardFrame = Math.max(0, effectiveFrame - cardStartFrame);
-            const cardProgress = spring({
-              frame: cardFrame,
-              fps: FPS,
-              config: { damping: 14, stiffness: 100 },
-            });
+          {/* Primary Row: Email, Phone, WhatsApp */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: cardGap,
+              width: '100%',
+              justifyContent: 'center',
+            }}
+          >
+            {primaryContacts.map((contact, index) => {
+              const cardStartFrame = 40 + index * 15;
+              const cardFrame = Math.max(0, effectiveFrame - cardStartFrame);
+              const cardProgress = spring({
+                frame: cardFrame,
+                fps: FPS,
+                config: { damping: 14, stiffness: 100 },
+              });
 
-            const cardOpacity = interpolate(cardProgress, [0, 1], [0, 1]);
-            const cardScale = interpolate(cardProgress, [0, 1], [0.8, 1]);
-            const cardY = interpolate(cardProgress, [0, 1], [30, 0]);
+              const cardOpacity = interpolate(cardProgress, [0, 1], [0, 1]);
+              const cardScale = interpolate(cardProgress, [0, 1], [0.8, 1]);
+              const cardY = interpolate(cardProgress, [0, 1], [30, 0]);
 
-            // Icon draw progress
-            const iconDrawProgress = interpolate(
-              effectiveFrame,
-              [cardStartFrame + 10, cardStartFrame + 40],
-              [0, 1],
-              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-            );
+              // Icon draw progress
+              const iconDrawProgress = interpolate(
+                effectiveFrame,
+                [cardStartFrame + 10, cardStartFrame + 40],
+                [0, 1],
+                { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+              );
 
-            const IconComponent = contact.icon;
+              const IconComponent = contact.icon;
 
-            return (
-              <a
-                key={contact.type}
-                href={contact.href}
-                target={contact.type !== 'email' && contact.type !== 'phone' ? '_blank' : undefined}
-                rel={
-                  contact.type !== 'email' && contact.type !== 'phone'
-                    ? 'noopener noreferrer'
-                    : undefined
-                }
-                style={{
-                  flex: isMobile ? undefined : 1,
-                  width: isMobile ? '100%' : undefined,
-                  display: 'flex',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 16,
-                  padding: responsiveSpacing(viewport.width, 16, 20),
-                  backgroundColor: toRgbaString(colors.cardBackground, 0.5),
-                  borderRadius: 12,
-                  border: `1px solid ${toRgbaString(colors.accent, 0.2 + 0.1 * glowPulse)}`,
-                  textDecoration: 'none',
-                  opacity: cardOpacity,
-                  transform: `scale(${cardScale}) translateY(${cardY}px)`,
-                  boxShadow: `0 0 ${15 * glowPulse}px ${toRgbaString(colors.accent, 0.1 * glowPulse)}`,
-                }}
-              >
-                <div
+              return (
+                <a
+                  key={contact.type}
+                  href={contact.href}
+                  target={
+                    contact.type !== 'email' && contact.type !== 'phone' ? '_blank' : undefined
+                  }
+                  rel={
+                    contact.type !== 'email' && contact.type !== 'phone'
+                      ? 'noopener noreferrer'
+                      : undefined
+                  }
                   style={{
-                    width: iconSize + 16,
-                    height: iconSize + 16,
-                    borderRadius: 10,
-                    backgroundColor: toRgbaString(colors.accent, 0.1),
+                    flex: 1,
                     display: 'flex',
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
+                    gap: 16,
+                    padding: responsiveSpacing(viewport.width, 16, 20),
+                    backgroundColor: toRgbaString(colors.cardBackground, 0.5),
+                    borderRadius: 12,
+                    border: `1px solid ${toRgbaString(colors.accent, 0.2 + 0.1 * glowPulse)}`,
+                    textDecoration: 'none',
+                    opacity: cardOpacity,
+                    transform: `scale(${cardScale}) translateY(${cardY}px)`,
+                    boxShadow: `0 0 ${15 * glowPulse}px ${toRgbaString(colors.accent, 0.1 * glowPulse)}`,
                   }}
                 >
-                  <IconComponent
-                    size={iconSize}
-                    color={toRgbString(colors.accent)}
-                    progress={iconDrawProgress}
-                  />
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span
+                  <div
                     style={{
-                      fontSize: cardLabelSize,
-                      fontWeight: 600,
-                      color: toRgbString(colors.textPrimary),
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      width: iconSize + 16,
+                      height: iconSize + 16,
+                      borderRadius: 10,
+                      backgroundColor: toRgbaString(colors.accent, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    {contact.label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: cardValueSize,
-                      fontWeight: 400,
-                      color: toRgbString(colors.textSecondary),
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                    }}
-                  >
-                    {contact.value}
-                  </span>
-                </div>
-              </a>
-            );
-          })}
-        </div>
+                    <IconComponent
+                      size={iconSize}
+                      color={toRgbString(colors.accent)}
+                      progress={iconDrawProgress}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span
+                      style={{
+                        fontSize: cardLabelSize,
+                        fontWeight: 600,
+                        color: toRgbString(colors.textPrimary),
+                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                      }}
+                    >
+                      {contact.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: cardValueSize,
+                        fontWeight: 400,
+                        color: toRgbString(colors.textSecondary),
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      }}
+                    >
+                      {contact.value}
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
 
-        {/* Secondary Row: LinkedIn, GitHub */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: isMobile ? 'column' : 'row',
-            gap: cardGap,
-            width: isMobile ? '100%' : 'auto',
-            justifyContent: 'center',
-          }}
-        >
-          {secondaryContacts.map((contact, index) => {
-            const cardStartFrame = 80 + index * 15;
-            const cardFrame = Math.max(0, effectiveFrame - cardStartFrame);
-            const cardProgress = spring({
-              frame: cardFrame,
-              fps: FPS,
-              config: { damping: 14, stiffness: 100 },
-            });
+          {/* Secondary Row: LinkedIn, GitHub */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              gap: cardGap,
+              width: 'auto',
+              justifyContent: 'center',
+            }}
+          >
+            {secondaryContacts.map((contact, index) => {
+              const cardStartFrame = 80 + index * 15;
+              const cardFrame = Math.max(0, effectiveFrame - cardStartFrame);
+              const cardProgress = spring({
+                frame: cardFrame,
+                fps: FPS,
+                config: { damping: 14, stiffness: 100 },
+              });
 
-            const cardOpacity = interpolate(cardProgress, [0, 1], [0, 1]);
-            const cardScale = interpolate(cardProgress, [0, 1], [0.8, 1]);
-            const cardY = interpolate(cardProgress, [0, 1], [30, 0]);
+              const cardOpacity = interpolate(cardProgress, [0, 1], [0, 1]);
+              const cardScale = interpolate(cardProgress, [0, 1], [0.8, 1]);
+              const cardY = interpolate(cardProgress, [0, 1], [30, 0]);
 
-            // Icon draw progress
-            const iconDrawProgress = interpolate(
-              effectiveFrame,
-              [cardStartFrame + 10, cardStartFrame + 40],
-              [0, 1],
-              { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-            );
+              // Icon draw progress
+              const iconDrawProgress = interpolate(
+                effectiveFrame,
+                [cardStartFrame + 10, cardStartFrame + 40],
+                [0, 1],
+                { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
+              );
 
-            const IconComponent = contact.icon;
+              const IconComponent = contact.icon;
 
-            return (
-              <a
-                key={contact.type}
-                href={contact.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  width: isMobile ? '100%' : responsiveValue(viewport.width, 140, 200, 140, 1200),
-                  display: 'flex',
-                  flexDirection: isMobile ? 'row' : 'column',
-                  alignItems: 'center',
-                  gap: isMobile ? 16 : 12,
-                  padding: responsiveSpacing(viewport.width, 16, 20),
-                  backgroundColor: toRgbaString(colors.cardBackground, 0.5),
-                  borderRadius: 12,
-                  border: `1px solid ${toRgbaString(colors.accent, 0.2 + 0.1 * glowPulse)}`,
-                  textDecoration: 'none',
-                  opacity: cardOpacity,
-                  transform: `scale(${cardScale}) translateY(${cardY}px)`,
-                  boxShadow: `0 0 ${15 * glowPulse}px ${toRgbaString(colors.accent, 0.1 * glowPulse)}`,
-                }}
-              >
-                <div
+              return (
+                <a
+                  key={contact.type}
+                  href={contact.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   style={{
-                    width: iconSize + 16,
-                    height: iconSize + 16,
-                    borderRadius: 10,
-                    backgroundColor: toRgbaString(colors.accent, 0.1),
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    flexShrink: 0,
-                  }}
-                >
-                  <IconComponent
-                    size={iconSize}
-                    color={toRgbString(colors.accent)}
-                    progress={iconDrawProgress}
-                  />
-                </div>
-                <div
-                  style={{
+                    width: responsiveValue(viewport.width, 140, 200, 140, 1200),
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 2,
-                    alignItems: isMobile ? 'flex-start' : 'center',
+                    alignItems: 'center',
+                    gap: 12,
+                    padding: responsiveSpacing(viewport.width, 16, 20),
+                    backgroundColor: toRgbaString(colors.cardBackground, 0.5),
+                    borderRadius: 12,
+                    border: `1px solid ${toRgbaString(colors.accent, 0.2 + 0.1 * glowPulse)}`,
+                    textDecoration: 'none',
+                    opacity: cardOpacity,
+                    transform: `scale(${cardScale}) translateY(${cardY}px)`,
+                    boxShadow: `0 0 ${15 * glowPulse}px ${toRgbaString(colors.accent, 0.1 * glowPulse)}`,
                   }}
                 >
-                  <span
+                  <div
                     style={{
-                      fontSize: cardLabelSize,
-                      fontWeight: 600,
-                      color: toRgbString(colors.textPrimary),
-                      fontFamily: 'system-ui, -apple-system, sans-serif',
+                      width: iconSize + 16,
+                      height: iconSize + 16,
+                      borderRadius: 10,
+                      backgroundColor: toRgbaString(colors.accent, 0.1),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
                     }}
                   >
-                    {contact.label}
-                  </span>
-                  <span
+                    <IconComponent
+                      size={iconSize}
+                      color={toRgbString(colors.accent)}
+                      progress={iconDrawProgress}
+                    />
+                  </div>
+                  <div
                     style={{
-                      fontSize: cardValueSize,
-                      fontWeight: 400,
-                      color: toRgbString(colors.textSecondary),
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 2,
+                      alignItems: 'center',
                     }}
                   >
-                    {contact.value}
-                  </span>
-                </div>
-              </a>
-            );
-          })}
+                    <span
+                      style={{
+                        fontSize: cardLabelSize,
+                        fontWeight: 600,
+                        color: toRgbString(colors.textPrimary),
+                        fontFamily: 'system-ui, -apple-system, sans-serif',
+                      }}
+                    >
+                      {contact.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: cardValueSize,
+                        fontWeight: 400,
+                        color: toRgbString(colors.textSecondary),
+                        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                      }}
+                    >
+                      {contact.value}
+                    </span>
+                  </div>
+                </a>
+              );
+            })}
+          </div>
         </div>
-      </div>
       </div>
 
       {/* Footer */}

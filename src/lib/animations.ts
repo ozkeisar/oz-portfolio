@@ -3,7 +3,7 @@
  * Inspired by addit_web animation system
  */
 
-import type { Variants, Transition } from 'framer-motion';
+import type { Transition, Variants } from 'framer-motion';
 
 // Default transition config
 const defaultTransition: Transition = {

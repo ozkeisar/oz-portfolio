@@ -68,10 +68,15 @@ export function ProfileImageTransition() {
   const { oPosition } = useHeroOPosition();
 
   // Image appearance in the O (after title animation completes during intro)
-  const introAppearanceProgress = interpolate(introFrame, [IMAGE_APPEAR_START, IMAGE_APPEAR_END], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
+  const introAppearanceProgress = interpolate(
+    introFrame,
+    [IMAGE_APPEAR_START, IMAGE_APPEAR_END],
+    [0, 1],
+    {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    }
+  );
 
   // Forward wrap entrance from Contact: replay intro appearance timing
   const isEnteringFromContactWrap = heroVisibility.isEnteringFromWrap && direction === 'forward';
@@ -82,7 +87,8 @@ export function ProfileImageTransition() {
   // Hero exit animation: image stays visible as shared element for all transitions
   // - Forward to Summary: image stays visible, moves to Summary position
   // - Backward wrap to Contact: image stays visible, moves to Contact position
-  const isHeroExitingForward = heroVisibility.isExiting && direction === 'forward' && !heroVisibility.isExitingToWrap;
+  const isHeroExitingForward =
+    heroVisibility.isExiting && direction === 'forward' && !heroVisibility.isExitingToWrap;
   const isHeroExitingToWrap = heroVisibility.isExitingToWrap && direction === 'backward';
 
   // Image stays visible during Hero exit (shared element behavior)
@@ -92,11 +98,17 @@ export function ProfileImageTransition() {
   const isSummaryEntering = summaryVisibility.isEntering && direction === 'forward';
 
   // Contact entrance from backward wrap: image stays visible (shared element)
-  const isContactEnteringFromWrap = contactVisibility.isEnteringFromWrap && direction === 'backward';
+  const isContactEnteringFromWrap =
+    contactVisibility.isEnteringFromWrap && direction === 'backward';
 
   // Don't render until animation starts appearing
   // Also render during backward entrance to Hero (full intro animation)
-  if (introAppearanceProgress <= 0 && !isIntroComplete && !isEnteringFromContactWrap && !isHeroEnteringBackward) {
+  if (
+    introAppearanceProgress <= 0 &&
+    !isIntroComplete &&
+    !isEnteringFromContactWrap &&
+    !isHeroEnteringBackward
+  ) {
     return null;
   }
 
@@ -159,20 +171,16 @@ export function ProfileImageTransition() {
   } else if (isHeroExitingForward) {
     // Hero is exiting forward to Summary
     // Image moves immediately as Hero exits (shared element behavior)
-    transitionProgress = interpolate(
-      sequenceFrame,
-      [0, HERO_TO_SUMMARY_IMAGE_DURATION],
-      [0, 1],
-      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-    );
+    transitionProgress = interpolate(sequenceFrame, [0, HERO_TO_SUMMARY_IMAGE_DURATION], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
   } else if (isSummaryEntering) {
     // Summary is entering - continue the image movement from where Hero exit left off
-    transitionProgress = interpolate(
-      sequenceFrame,
-      [0, HERO_TO_SUMMARY_IMAGE_DURATION],
-      [0, 1],
-      { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }
-    );
+    transitionProgress = interpolate(sequenceFrame, [0, HERO_TO_SUMMARY_IMAGE_DURATION], [0, 1], {
+      extrapolateLeft: 'clamp',
+      extrapolateRight: 'clamp',
+    });
   } else if (
     summaryVisibility.isCurrent &&
     !summaryVisibility.isExiting &&
@@ -188,8 +196,7 @@ export function ProfileImageTransition() {
     transitionProgress = 1;
   }
 
-  // Responsive breakpoints (must match SummarySection)
-  const isMobile = viewport.width < 768;
+  // Desktop-only component (≥768px)
 
   // Use measured position if available, otherwise calculate fallback
   // The measured position is much more accurate as it accounts for
@@ -239,52 +246,17 @@ export function ProfileImageTransition() {
   }
 
   // Summary position - must match SummarySection layout exactly
-  // Photo is smaller on mobile
-  const summaryPhotoSize = isMobile
-    ? responsiveFontSize(viewport.width, 80, 100)
-    : responsiveFontSize(viewport.width, 160, 200);
+  const summaryPhotoSize = responsiveFontSize(viewport.width, 160, 200);
   const contentGap = responsiveSpacing(viewport.width, 24, 60);
   const textMaxWidth = responsiveValue(viewport.width, 320, 500, 320, 1200);
 
-  let summaryX: number;
-  let summaryY: number;
+  // Desktop: photo on left side of centered row
+  // Total content width = photoSize + gap + textWidth
+  const totalContentWidth = summaryPhotoSize + contentGap + textMaxWidth;
+  const contentStartX = (viewport.width - totalContentWidth) / 2;
 
-  // Mobile layout calculations (must match SummarySection exactly)
-  const mobileTopPadding = viewport.height * 0.15; // Must match SummarySection paddingTop
-  const mobileScrolledSize = 32; // Small image next to section number
-  const titleSize = responsiveFontSize(viewport.width, 20, 32);
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
-  const sectionNumberFontSize = numberSize + 10;
-
-  if (isMobile) {
-    // Mobile: photo centered above the text content
-    // Position so image bottom is above where text starts (mobileTopPadding)
-    const gapAboveText = 16; // gap between image bottom and text top
-    summaryX = viewport.width / 2;
-    summaryY = mobileTopPadding - gapAboveText - summaryPhotoSize / 2;
-  } else {
-    // Desktop: photo on left side of centered row
-    // Total content width = photoSize + gap + textWidth
-    const totalContentWidth = summaryPhotoSize + contentGap + textMaxWidth;
-    const contentStartX = (viewport.width - totalContentWidth) / 2;
-
-    summaryX = contentStartX + summaryPhotoSize / 2;
-    summaryY = viewport.height / 2;
-  }
-
-  // Mobile scroll-based transition: move image into section number row
-  // Calculate text content position (centered div with maxWidth)
-  const textContentLeftEdge = (viewport.width - textMaxWidth) / 2;
-
-  // Position image at the LEFT of the section number row, inside the spacer
-  // Image sits at: textContentLeftEdge + imageSize/2 (for center positioning within spacer)
-  const mobileScrolledX = textContentLeftEdge + mobileScrolledSize / 2;
-
-  // Y position: align with section number row
-  // Section number row starts at: mobileTopPadding (top of text content on mobile)
-  // Center image vertically with the section number text
-  const sectionNumberCenterY = mobileTopPadding + sectionNumberFontSize / 2;
-  const mobileScrolledY = sectionNumberCenterY;
+  const summaryX = contentStartX + summaryPhotoSize / 2;
+  const summaryY = viewport.height / 2;
 
   // ===========================================
   // Experience section position calculations
@@ -303,7 +275,7 @@ export function ProfileImageTransition() {
   // ExperienceSection uses alignItems: 'center' with maxWidth: contentMaxWidth + 60
   // This centers the content at viewport center
   // Content left edge = (viewport.width - totalMaxWidth) / 2
-  const expTotalMaxWidth = expContentMaxWidth + (isMobile ? 0 : 60);
+  const expTotalMaxWidth = expContentMaxWidth + 60;
   const expContentLeftEdge = (viewport.width - expTotalMaxWidth) / 2;
 
   // Rail is the first flex child with width 40px, centered at left edge + 20
@@ -315,8 +287,7 @@ export function ProfileImageTransition() {
   // - + header marginBottom
   // - + progressY (position within rail)
   const expHeaderMarginBottom = responsiveSpacing(viewport.width, 16, 24);
-  const expSectionNumberHeight =
-    (isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20)) + 10;
+  const expSectionNumberHeight = responsiveFontSize(viewport.width, 15, 20) + 10;
   const expHeaderTotalHeight = expSectionNumberHeight + expHeaderMarginBottom;
 
   // Timeline dots position (from TimelineRail - must match exactly!)
@@ -350,42 +321,9 @@ export function ProfileImageTransition() {
 
   // Desktop experience position: center of rail, following progress
   // Add small offset to align with dot center (accounting for image size difference)
-  const expDesktopX = expRailCenterX;
-  const expDesktopY = expVerticalPadding + expHeaderTotalHeight + progressY + 8;
-
-  // Mobile experience position: in the Experience section header row
-  // Must match ExperienceSection's header layout exactly
-  const expMobileImageSize = 32; // Must match ExperienceSection's mobileImageSize
-
-  // X position: left edge of content area + image center
-  const expMobileContentLeftEdge = (viewport.width - expContentMaxWidth) / 2;
-  const expMobileX = expMobileContentLeftEdge + expMobileImageSize / 2;
-
-  // Y position: verticalPadding + center of header row
-  // The header row height on mobile is determined by the spacer (32px)
-  const expMobileRowHeight = expMobileImageSize; // Row height matches image size
-
-  // Account for header entrance animation on mobile
-  // The header has transform: translateY(headerY) where headerY goes 20 → 0
-  // We need to apply the same offset so the image follows the header
-  let expHeaderAnimationOffset = 0;
-  if (experienceVisibility.isEntering && !experienceVisibility.isEnteringBackward) {
-    // Calculate the same delayed entrance progress as ExperienceSection
-    const delayedFrame = Math.max(0, sequenceFrame - EXPERIENCE_TRANSITION_DELAY);
-    const entranceProgress = spring({
-      frame: delayedFrame,
-      fps: FPS,
-      config: { damping: 14, stiffness: 80 },
-    });
-    // Header Y offset during entrance animation (20 → 0)
-    expHeaderAnimationOffset = interpolate(entranceProgress, [0, 1], [20, 0]);
-  }
-
-  const expMobileY = expVerticalPadding + expMobileRowHeight / 2 + expHeaderAnimationOffset;
-
-  const experienceX = isMobile ? expMobileX : expDesktopX;
-  const experienceY = isMobile ? expMobileY : expDesktopY;
-  const experienceImageSize = isMobile ? expMobileImageSize : timelineImageSize;
+  const experienceX = expRailCenterX;
+  const experienceY = expVerticalPadding + expHeaderTotalHeight + progressY + 8;
+  const experienceImageSize = timelineImageSize;
 
   // ===========================================
   // Impact section position calculations
@@ -395,14 +333,13 @@ export function ProfileImageTransition() {
   // Impact layout constants (from ImpactSection)
   const impactVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
   const impactContentMaxWidth = responsiveValue(viewport.width, 320, 600, 320, 1200);
-  const impactImageSize = isMobile ? 32 : 40; // Matches Impact header image size
+  const impactImageSize = 40; // Matches Impact header image size
 
   // Impact content left edge for positioning
   const impactContentLeftEdge = (viewport.width - impactContentMaxWidth) / 2;
 
-  // Impact header position - image in header row like Experience
-  const impactMobileX = impactContentLeftEdge + impactImageSize / 2;
-  const impactDesktopX = impactContentLeftEdge + impactImageSize / 2;
+  // Impact header position - image in header row
+  const impactX = impactContentLeftEdge + impactImageSize / 2;
 
   // Account for header entrance animation
   // The header has transform: translateY(headerY) where headerY goes 20 → 0
@@ -420,11 +357,7 @@ export function ProfileImageTransition() {
     impactHeaderAnimationOffset = interpolate(entranceProgress, [0, 1], [20, 0]);
   }
 
-  const impactMobileY = impactVerticalPadding + impactImageSize / 2 + impactHeaderAnimationOffset;
-  const impactDesktopY = impactVerticalPadding + impactImageSize / 2 + impactHeaderAnimationOffset;
-
-  const impactX = isMobile ? impactMobileX : impactDesktopX;
-  const impactY = isMobile ? impactMobileY : impactDesktopY;
+  const impactY = impactVerticalPadding + impactImageSize / 2 + impactHeaderAnimationOffset;
 
   // ===========================================
   // Skills section position calculations
@@ -438,7 +371,7 @@ export function ProfileImageTransition() {
   const networkSize = Math.min(
     viewport.width - skillsHorizontalPadding * 2,
     viewport.height - skillsVerticalPadding * 2 - 100,
-    isMobile ? 350 : isTablet ? 500 : 600
+    isTablet ? 500 : 600
   );
 
   // Center of the viewport (exact middle of screen)
@@ -446,7 +379,7 @@ export function ProfileImageTransition() {
   const skillsCenterY = viewport.height / 2;
 
   // Size of image when at center of skills network (larger, prominent)
-  const skillsImageSize = isMobile ? 60 : networkSize * 0.12;
+  const skillsImageSize = networkSize * 0.12;
 
   // ===========================================
   // Contact section position calculations
@@ -454,12 +387,11 @@ export function ProfileImageTransition() {
   // Image appears above the "Ready to Build..." invitation text
 
   const contactVerticalPadding = responsiveSpacing(viewport.width, 20, 40);
-  const contactImageSize = isMobile ? 50 : 70; // Size in contact section
+  const contactImageSize = 70; // Size in contact section
 
   // Contact header height (section number + title + marginBottom)
   const contactHeaderMarginBottom = responsiveSpacing(viewport.width, 16, 24);
-  const contactSectionNumberHeight =
-    (isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20)) + 10;
+  const contactSectionNumberHeight = responsiveFontSize(viewport.width, 15, 20) + 10;
   const contactHeaderTotalHeight = contactSectionNumberHeight + contactHeaderMarginBottom;
 
   // Invitation text starts after header, with some space above for the image
@@ -710,87 +642,15 @@ export function ProfileImageTransition() {
     });
   }
 
-  // Calculate scroll progress for mobile (0 = summary position, 1 = scrolled position)
-  // Image should complete moving quickly so it's in place before exit animation
-  // Using a small threshold (20px) for fast but smooth transition
-  const scrollMoveThreshold = 20;
-
-  // Calculate base scroll progress from contentScrollOffset
-  const baseScrollProgress = interpolate(contentScrollOffset, [0, scrollMoveThreshold], [0, 1], {
-    extrapolateLeft: 'clamp',
-    extrapolateRight: 'clamp',
-  });
-
-  let mobileScrollProgress = 0;
-  if (isMobile) {
-    if (state === 'CONTENT_SCROLL' && summaryVisibility.isCurrent) {
-      // Normal content scroll on summary - use scroll offset directly
-      mobileScrollProgress = baseScrollProgress;
-    } else if (summaryVisibility.isReversing) {
-      // Backward transition from summary to hero - animate scroll position back to 0
-      // contentScrollOffset is preserved, so we can use it
-      const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      mobileScrollProgress = baseScrollProgress * (1 - reverseAnimationProgress);
-    } else if (isTransitioningToExperience) {
-      // When transitioning to experience, use actual scroll progress to prevent jump
-      // The image will animate from its current position to experience position
-      mobileScrollProgress = baseScrollProgress;
-    } else if (experienceVisibility.isActive || experienceVisibility.isEntering) {
-      // When on experience section, keep at fully scrolled position
-      mobileScrollProgress = 1;
-    } else if (isTransitioningFromExperience) {
-      // When coming back from experience, animate from scrolled position to main position
-      // Use the same timing as experienceTransitionProgress going 1 → 0
-      const reverseProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
-        extrapolateLeft: 'clamp',
-        extrapolateRight: 'clamp',
-      });
-      mobileScrollProgress = 1 - reverseProgress; // Goes from 1 → 0
-    }
-    // In other states (IDLE, forward TRANSITIONING, etc.), mobileScrollProgress stays 0
-  }
-
   // Base position from hero → summary transition
-  const baseX = interpolate(transitionProgress, [0, 1], [heroX, summaryX]);
-  const baseY = interpolate(transitionProgress, [0, 1], [heroY, summaryY]);
-  const baseWidth = interpolate(transitionProgress, [0, 1], [oWidth, summaryPhotoSize]);
-  const baseHeight = interpolate(transitionProgress, [0, 1], [oHeight, summaryPhotoSize]);
-
-  // Apply mobile scroll transition on top of base position
-  // The scrolled position also moves with content scroll (same as text translateY)
-  // During backward transition, animate scrollY back to 0 along with mobileScrollProgress
-  let scrollY = 0;
-  if (state === 'CONTENT_SCROLL' && summaryVisibility.isCurrent) {
-    scrollY = contentScrollOffset;
-  } else if (isTransitioningToExperience) {
-    // Maintain scroll position during exit to prevent vertical jump
-    scrollY = contentScrollOffset;
-  } else if (summaryVisibility.isReversing) {
-    // Animate scrollY back to 0 over the first 30 frames of reverse transition
-    const reverseAnimationProgress = interpolate(sequenceFrame, [0, 30], [0, 1], {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    });
-    scrollY = contentScrollOffset * (1 - reverseAnimationProgress);
-  }
-
-  // Calculate summary scrolled position (before experience transition)
-  const summaryScrolledX = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseX, mobileScrolledX])
-    : baseX;
-  const summaryScrolledY = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseY, mobileScrolledY]) -
-      scrollY * mobileScrollProgress
-    : baseY;
-  const summaryScrolledWidth = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseWidth, mobileScrolledSize])
-    : baseWidth;
-  const summaryScrolledHeight = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseHeight, mobileScrolledSize])
-    : baseHeight;
+  const summaryScrolledX = interpolate(transitionProgress, [0, 1], [heroX, summaryX]);
+  const summaryScrolledY = interpolate(transitionProgress, [0, 1], [heroY, summaryY]);
+  const summaryScrolledWidth = interpolate(transitionProgress, [0, 1], [oWidth, summaryPhotoSize]);
+  const summaryScrolledHeight = interpolate(
+    transitionProgress,
+    [0, 1],
+    [oHeight, summaryPhotoSize]
+  );
 
   // Position: interpolate from summary scrolled → experience
   // Experience position on desktop follows the timeline; on mobile stays in header
@@ -860,8 +720,16 @@ export function ProfileImageTransition() {
   );
 
   // Contact position: interpolate from skills center → contact position
-  const contactPositionX = interpolate(contactTransitionProgress, [0, 1], [skillsPositionX, contactX]);
-  const contactPositionY = interpolate(contactTransitionProgress, [0, 1], [skillsPositionY, contactY]);
+  const contactPositionX = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsPositionX, contactX]
+  );
+  const contactPositionY = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsPositionY, contactY]
+  );
   const contactPositionWidth = interpolate(
     contactTransitionProgress,
     [0, 1],
@@ -913,7 +781,12 @@ export function ProfileImageTransition() {
     // Backward entrance from Summary to Hero: image stays visible (shared element)
     // Hero content plays intro animation, but image is already visible and just moves to position
     opacity = 1;
-  } else if (isHeroExitingForward || isHeroExitingToWrap || isSummaryEntering || isContactEnteringFromWrap) {
+  } else if (
+    isHeroExitingForward ||
+    isHeroExitingToWrap ||
+    isSummaryEntering ||
+    isContactEnteringFromWrap
+  ) {
     // All other transitions: image stays visible (shared element behavior)
     opacity = 1;
   } else if (isIntroComplete) {
@@ -927,19 +800,16 @@ export function ProfileImageTransition() {
   // Image no longer fades when transitioning to/from experience - it moves instead
   const exitOpacity = 1;
 
-  // White border padding (grows during transition, shrinks when scrolled/in timeline)
+  // White border padding (grows during transition, shrinks when in timeline)
   const baseBorderPadding = interpolate(transitionProgress, [0, 0.5], [3, 6], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const summaryBorderPadding = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseBorderPadding, 2])
-    : baseBorderPadding;
   // Shrink border when in experience timeline
   const experienceBorderPadding = interpolate(
     experienceTransitionProgress,
     [0, 1],
-    [summaryBorderPadding, 2]
+    [baseBorderPadding, 2]
   );
   // Keep small border in impact section
   const impactBorderPadding = interpolate(
@@ -948,9 +818,17 @@ export function ProfileImageTransition() {
     [experienceBorderPadding, 2]
   );
   // Grow border when at skills center (more prominent)
-  const skillsBorderPadding = interpolate(skillsTransitionProgress, [0, 1], [impactBorderPadding, 4]);
+  const skillsBorderPadding = interpolate(
+    skillsTransitionProgress,
+    [0, 1],
+    [impactBorderPadding, 4]
+  );
   // Slightly smaller border in contact section
-  const contactBorderPadding = interpolate(contactTransitionProgress, [0, 1], [skillsBorderPadding, 3]);
+  const contactBorderPadding = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsBorderPadding, 3]
+  );
   // Border padding for wrap transitions
   let borderPadding = contactBorderPadding;
   if (wrapToHeroProgress > 0) {
@@ -961,19 +839,16 @@ export function ProfileImageTransition() {
     borderPadding = interpolate(wrapToContactProgress, [0, 1], [3, 3]);
   }
 
-  // Subtle shadow (reduces when scrolled/in timeline)
+  // Subtle shadow (reduces when in timeline)
   const baseShadowOpacity = interpolate(transitionProgress, [0.1, 0.5], [0.1, 0.25], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const summaryShadowOpacity = isMobile
-    ? interpolate(mobileScrollProgress, [0, 1], [baseShadowOpacity, 0.15])
-    : baseShadowOpacity;
   // Reduce shadow when in experience timeline
   const experienceShadowOpacity = interpolate(
     experienceTransitionProgress,
     [0, 1],
-    [summaryShadowOpacity, 0.1]
+    [baseShadowOpacity, 0.1]
   );
   // Keep small shadow in impact section
   const impactShadowOpacity = interpolate(
@@ -988,7 +863,11 @@ export function ProfileImageTransition() {
     [impactShadowOpacity, 0.3]
   );
   // Moderate shadow in contact section
-  const contactShadowOpacity = interpolate(contactTransitionProgress, [0, 1], [skillsShadowOpacity, 0.25]);
+  const contactShadowOpacity = interpolate(
+    contactTransitionProgress,
+    [0, 1],
+    [skillsShadowOpacity, 0.25]
+  );
   // Shadow for wrap transitions
   let shadowOpacity = contactShadowOpacity;
   if (wrapToHeroProgress > 0) {

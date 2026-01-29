@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react';
-import { HomeEntrance } from '../components/home/HomeEntrance';
-import { HomeHero } from '../components/home/HomeHero';
-import { HomeSummary } from '../components/home/HomeSummary';
-import { HomeExperience } from '../components/home/HomeExperience';
-import { HomeImpact } from '../components/home/HomeImpact';
-import { HomeSkills } from '../components/home/HomeSkills';
-import { HomeContact } from '../components/home/HomeContact';
-import { HomeHeader } from '../components/home/HomeHeader';
-import { HomeProfileImage } from '../components/home/HomeProfileImage';
-import { HeroOPositionProvider } from '../context/HeroOPositionContext';
+import { useCallback, useEffect, useState } from 'react';
 import ozPhoto from '../assets/oz-photo.webp';
+import { HomeContact } from '../components/home/HomeContact';
+import { HomeEntrance } from '../components/home/HomeEntrance';
+import { HomeExperience } from '../components/home/HomeExperience';
+import { HomeHeader } from '../components/home/HomeHeader';
+import { HomeHero } from '../components/home/HomeHero';
+import { HomeImpact } from '../components/home/HomeImpact';
+import { HomeProfileImage } from '../components/home/HomeProfileImage';
+import { HomeSkills } from '../components/home/HomeSkills';
+import { HomeSummary } from '../components/home/HomeSummary';
+import { HeroOPositionProvider } from '../context/HeroOPositionContext';
 import '../styles/home.css';
 
 type AnimationPhase = 'entrance' | 'content';
@@ -98,19 +98,13 @@ export function Home() {
         }}
       >
         {/* Entrance animation overlay */}
-        {phase === 'entrance' && (
-          <HomeEntrance onComplete={handleEntranceComplete} />
-        )}
+        {phase === 'entrance' && <HomeEntrance onComplete={handleEntranceComplete} />}
 
         {/* Header - visible on first scroll, same as profile image */}
         <HomeHeader visible={phase === 'content' && !isAtTop} />
 
         {/* Profile image that transitions between hero and header */}
-        <HomeProfileImage
-          phase={phase}
-          isAtTop={isAtTop}
-          visible={showImage}
-        />
+        <HomeProfileImage phase={phase} isAtTop={isAtTop} visible={showImage} />
 
         {/* Main content - visible after entrance */}
         <main

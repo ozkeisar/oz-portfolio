@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
+import { createContext, type ReactNode, useCallback, useContext, useState } from 'react';
 
 /**
  * Position of the "O" letter center in screen coordinates

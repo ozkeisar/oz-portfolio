@@ -25,7 +25,6 @@ const FIRST_ITEM_WRITE_DURATION = 30; // 1 second for typewriter (30 frames at 3
 const FORWARD_ENTRANCE_DELAY = 15; // Wait for Summary exit (500ms) before appearing
 const BACKWARD_ENTRANCE_DELAY = 15; // Wait for Impact exit (500ms) before appearing
 
-
 /**
  * Experience Section with scroll-driven timeline animation
  *
@@ -55,9 +54,6 @@ export function ExperienceSection() {
   const contentRef = useRef<HTMLDivElement>(null);
   // Track if we've already set scroll for backward entry
   const hasSetBackwardScroll = useRef(false);
-
-  // Responsive breakpoints
-  const isMobile = viewport.width < 768;
 
   // Set max content scroll when section becomes active
   // Also jump to end when entering backward from Impact
@@ -188,9 +184,9 @@ export function ExperienceSection() {
         scrollDirection: direction,
       });
 
-  // Responsive values
+  // Responsive values - desktop only
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const numberSize = responsiveFontSize(viewport.width, 15, 20);
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
   const contentGap = responsiveSpacing(viewport.width, 16, 40);
@@ -202,25 +198,6 @@ export function ExperienceSection() {
   const availableWidth = viewport.width - horizontalPadding * 2;
   // Use the smaller of the two to prevent overflow
   const contentMaxWidth = Math.min(baseContentMaxWidth, availableWidth);
-
-  // Mobile image spacer (must match ProfileImageTransition)
-  const mobileImageSize = 32;
-  // Calculate image spacer progress for mobile header
-  // Image is present when entering forward, active, or exiting backward
-  let mobileImageProgress = 0;
-  if (isMobile) {
-    if (isEnteringForward) {
-      // Animate spacer in as entrance progresses
-      mobileImageProgress = entranceProgress;
-    } else if (isActive || (isEntering && isEnteringBackward)) {
-      // Spacer fully visible when active or entering backward
-      mobileImageProgress = 1;
-    } else if (isReversing) {
-      // Animate spacer out during reverse (going back to Summary)
-      mobileImageProgress = entranceProgress; // entranceProgress goes 1→0 when reversing
-    }
-  }
-  const mobileImageSpacerWidth = mobileImageProgress * (mobileImageSize + 8);
 
   // Rail height calculation
   const railHeight = Math.min(400, viewport.height * 0.5);
@@ -345,7 +322,7 @@ export function ExperienceSection() {
       <div
         style={{
           width: '100%',
-          maxWidth: contentMaxWidth + (isMobile ? 0 : 60), // Account for rail width
+          maxWidth: contentMaxWidth + 60, // Account for rail width
           opacity: headerOpacity,
           transform: `translateY(${headerY}px)`,
           marginBottom: responsiveSpacing(viewport.width, 16, 24),
@@ -360,16 +337,6 @@ export function ExperienceSection() {
             opacity: interpolate(numberProgress, [0, 1], [0, 1]),
           }}
         >
-          {/* Dynamic spacer for profile image on mobile */}
-          {isMobile && mobileImageSpacerWidth > 0 && (
-            <div
-              style={{
-                width: mobileImageSpacerWidth,
-                height: mobileImageSize,
-                flexShrink: 0,
-              }}
-            />
-          )}
           <span
             style={{
               fontSize: numberSize + 10,
@@ -410,7 +377,7 @@ export function ExperienceSection() {
           display: 'flex',
           gap: contentGap,
           width: '100%',
-          maxWidth: contentMaxWidth + (isMobile ? 0 : 60),
+          maxWidth: contentMaxWidth + 60,
           flex: 1,
           overflow: 'hidden',
           opacity: contentOpacity,
@@ -418,14 +385,12 @@ export function ExperienceSection() {
           boxSizing: 'border-box',
         }}
       >
-        {/* Timeline Rail (hidden on mobile) */}
-        {!isMobile && (
-          <TimelineRail
-            scrollState={scrollState}
-            entranceFrame={sequenceFrame}
-            railHeight={railHeight}
-          />
-        )}
+        {/* Timeline Rail */}
+        <TimelineRail
+          scrollState={scrollState}
+          entranceFrame={sequenceFrame}
+          railHeight={railHeight}
+        />
 
         {/* Timeline Items */}
         <div

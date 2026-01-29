@@ -1,8 +1,8 @@
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
-import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString, toRgbaString } from '../../utils/colors';
+import { responsiveFontSize, responsiveSpacing, useViewport } from '../../hooks/useViewport';
 import { staggerContainer, viewportConfig } from '../../lib/animations';
+import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 
 // Typewriter text component using Framer Motion
 function TypewriterText({
@@ -138,13 +138,16 @@ export function HomeSummary() {
   const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
 
   // Calculate sequential delays for each text segment
-  const para1Part1 = 'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From ';
+  const para1Part1 =
+    'Engineering leader with 9+ years of experience architecting and delivering complex systems at scale. From ';
   const para1Highlight1 = 'mission-critical defense systems';
   const para1Part2 = ' in the Israeli Air Force to leading development teams at ';
   const para1Highlight2 = 'Abra';
-  const para1Part3 = ', I specialize in turning ambitious technical challenges into production-ready solutions.';
+  const para1Part3 =
+    ', I specialize in turning ambitious technical challenges into production-ready solutions.';
 
-  const para2Part1 = 'Currently directing AI-first development initiatives and managing cross-functional teams delivering ';
+  const para2Part1 =
+    'Currently directing AI-first development initiatives and managing cross-functional teams delivering ';
   const para2Highlight1 = 'enterprise banking platforms';
   const para2Part2 = ' (1M+ users), ';
   const para2Highlight2 = 'real-time security systems';
@@ -152,9 +155,11 @@ export function HomeSummary() {
   const para2Highlight3 = 'medical imaging software';
   const para2Part4 = '.';
 
-  const para3Part1 = 'Committed to advancing developer productivity through tooling and methodology. Creator of ';
+  const para3Part1 =
+    'Committed to advancing developer productivity through tooling and methodology. Creator of ';
   const para3Highlight1 = 'Mockingbird';
-  const para3Part2 = ' and architect of AI-augmented development workflows adopted across engineering teams.';
+  const para3Part2 =
+    ' and architect of AI-augmented development workflows adopted across engineering teams.';
 
   // Calculate cumulative delays - total animation ~2 seconds
   const headerDelay = 0;
@@ -268,7 +273,12 @@ export function HomeSummary() {
             <TypewriterText text={para1Part1} delay={p1d1} isInView={isInView} />
             <Highlight text={para1Highlight1} delay={p1d2} isInView={isInView} />
             <TypewriterText text={para1Part2} delay={p1d3} isInView={isInView} />
-            <Highlight text={para1Highlight2} href="https://abra-bm.com" delay={p1d4} isInView={isInView} />
+            <Highlight
+              text={para1Highlight2}
+              href="https://abra-bm.com"
+              delay={p1d4}
+              isInView={isInView}
+            />
             <TypewriterText text={para1Part3} delay={p1d5} isInView={isInView} />
           </p>
 
@@ -286,7 +296,12 @@ export function HomeSummary() {
           {/* Paragraph 3 */}
           <p style={{ margin: 0, marginTop: responsiveSpacing(viewport.width, 12, 16) }}>
             <TypewriterText text={para3Part1} delay={p3d1} isInView={isInView} />
-            <Highlight text={para3Highlight1} href="https://github.com/ozkeisar/mockingbird" delay={p3d2} isInView={isInView} />
+            <Highlight
+              text={para3Highlight1}
+              href="https://github.com/ozkeisar/mockingbird"
+              delay={p3d2}
+              isInView={isInView}
+            />
             <TypewriterText text={para3Part2} delay={p3d3} isInView={isInView} />
           </p>
         </div>

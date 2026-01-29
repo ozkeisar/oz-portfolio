@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { ComponentType } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useEffect, useState } from 'react';
 import { colors, toRgbString } from '../../utils/colors';
-import { UserIcon } from '../icons/UserIcon';
+import { BoltIcon } from '../icons/BoltIcon';
 import { BriefcaseIcon } from '../icons/BriefcaseIcon';
 import { ChartIcon } from '../icons/ChartIcon';
-import { BoltIcon } from '../icons/BoltIcon';
 import { EmailIcon } from '../icons/EmailIcon';
+import { UserIcon } from '../icons/UserIcon';
 
 type HomeHeaderProps = {
   visible: boolean;
@@ -215,43 +215,44 @@ export function HomeHeader({ visible }: HomeHeaderProps) {
                   background: 'rgba(255, 255, 255, 0.08)',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                  boxShadow:
+                    '0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1)',
                   minWidth: 200,
                   pointerEvents: 'auto',
                 }}
               >
-              {navItems.map((item, index) => (
-                <motion.button
-                  key={item.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.05, duration: 0.2 }}
-                  onClick={() => handleNavClick(item.id)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 12,
-                    padding: '14px 20px',
-                    borderRadius: 12,
-                    border: 'none',
-                    background: 'transparent',
-                    cursor: 'pointer',
-                    fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
-                    fontSize: 16,
-                    fontWeight: 500,
-                    color: toRgbString(colors.textPrimary),
-                    textAlign: 'left',
-                    transition: 'background 0.2s ease',
-                  }}
-                  whileHover={{
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  <item.icon size={20} color={toRgbString(colors.textSecondary)} progress={1} />
-                  <span>{item.label}</span>
-                </motion.button>
-              ))}
+                {navItems.map((item, index) => (
+                  <motion.button
+                    key={item.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.2 }}
+                    onClick={() => handleNavClick(item.id)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      padding: '14px 20px',
+                      borderRadius: 12,
+                      border: 'none',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, sans-serif',
+                      fontSize: 16,
+                      fontWeight: 500,
+                      color: toRgbString(colors.textPrimary),
+                      textAlign: 'left',
+                      transition: 'background 0.2s ease',
+                    }}
+                    whileHover={{
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                    }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <item.icon size={20} color={toRgbString(colors.textSecondary)} progress={1} />
+                    <span>{item.label}</span>
+                  </motion.button>
+                ))}
               </motion.nav>
             </div>
           </>

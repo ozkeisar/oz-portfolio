@@ -1,8 +1,8 @@
-import { useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString, toRgbaString } from '../../utils/colors';
+import { useRef } from 'react';
 import { skillCategories } from '../../data/skillsData';
+import { responsiveFontSize, responsiveSpacing, useViewport } from '../../hooks/useViewport';
+import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 
 // Typewriter text component using Framer Motion
 function TypewriterText({
@@ -166,7 +166,9 @@ export function HomeSkills() {
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }
+                  }
                   transition={{ duration: 0.25, delay: cardDelay }}
                   style={{
                     padding: responsiveSpacing(viewport.width, 16, 20),
@@ -235,7 +237,9 @@ export function HomeSkills() {
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }
+                  }
                   transition={{ duration: 0.25, delay: cardDelay }}
                   style={{
                     padding: responsiveSpacing(viewport.width, 16, 20),
@@ -304,7 +308,9 @@ export function HomeSkills() {
                 <motion.div
                   key={category.id}
                   initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }}
+                  animate={
+                    isInView ? { opacity: 1, y: 0, scale: 1 } : { opacity: 0, y: 20, scale: 0.95 }
+                  }
                   transition={{ duration: 0.25, delay: cardDelay }}
                   style={{
                     padding: responsiveSpacing(viewport.width, 16, 20),

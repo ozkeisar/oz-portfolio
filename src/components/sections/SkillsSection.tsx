@@ -73,7 +73,7 @@ function getSkillPosition(
  */
 export function SkillsSection() {
   const { sequenceFrame, direction, viewport } = useAnimationContext();
-  const { isVisible, isExiting, isReversing, isEntering, isActive, isEnteringBackward } =
+  const { isVisible, isExiting, isReversing, isEntering, isEnteringBackward } =
     useSectionVisibility('skills');
 
   // Continuous frame counter for orbital/breathing animations
@@ -119,8 +119,7 @@ export function SkillsSection() {
     return null;
   }
 
-  // Responsive breakpoints
-  const isMobile = viewport.width < 768;
+  // Responsive breakpoints - desktop only
   const isTablet = viewport.width >= 768 && viewport.width < 1024;
 
   // Detect entering/exiting directions
@@ -184,27 +183,24 @@ export function SkillsSection() {
           scrollDirection: direction,
         });
 
-  // Responsive values
+  // Responsive values - desktop only
   const titleSize = responsiveFontSize(viewport.width, 20, 32);
-  const numberSize = isMobile ? titleSize : responsiveFontSize(viewport.width, 15, 20);
+  const numberSize = responsiveFontSize(viewport.width, 15, 20);
   const horizontalPadding = responsiveSpacing(viewport.width, 24, 80);
   const verticalPadding = responsiveSpacing(viewport.width, 20, 40);
   const availableWidth = viewport.width - horizontalPadding * 2;
 
-  // Network layout dimensions - responsive for all screen sizes
+  // Network layout dimensions - desktop only
   const networkSize = Math.min(
     viewport.width - horizontalPadding * 2,
     viewport.height - verticalPadding * 2 - 100, // Account for header
-    isMobile ? 320 : isTablet ? 480 : 600
+    isTablet ? 480 : 600
   );
 
-  // Responsive radius - oval shape on mobile (egg-like), circular on desktop
-  const categoryRadiusX = networkSize * (isMobile ? 0.38 : isTablet ? 0.36 : 0.38);
-  const categoryRadiusY = networkSize * (isMobile ? 0.48 : isTablet ? 0.36 : 0.38);
-  const skillRadius = networkSize * (isMobile ? 0.18 : 0.15); // Larger orbit on mobile for more spacing
-
-  // Use orbital layout on all screen sizes
-  const useMobileLayout = false;
+  // Responsive radius - circular on desktop
+  const categoryRadiusX = networkSize * (isTablet ? 0.36 : 0.38);
+  const categoryRadiusY = networkSize * (isTablet ? 0.36 : 0.38);
+  const skillRadius = networkSize * 0.15;
 
   // Content width - ensure it fits within available space
   const baseContentMaxWidth = responsiveValue(viewport.width, 350, 800, 320, 1200);
@@ -221,20 +217,6 @@ export function SkillsSection() {
     fps: FPS,
     config: { damping: 14, stiffness: 100 },
   });
-
-  // Mobile image spacer (matches other sections)
-  const mobileImageSize = 32;
-  let mobileImageProgress = 0;
-  if (isMobile) {
-    if (isEnteringForward) {
-      mobileImageProgress = entranceProgress;
-    } else if (isActive || isEnteringBackward) {
-      mobileImageProgress = 1;
-    } else if (isReversing) {
-      mobileImageProgress = entranceProgress;
-    }
-  }
-  const mobileImageSpacerWidth = mobileImageProgress * (mobileImageSize + 8);
 
   return (
     <div
@@ -272,16 +254,6 @@ export function SkillsSection() {
             opacity: interpolate(numberProgress, [0, 1], [0, 1]),
           }}
         >
-          {/* Dynamic spacer for profile image on mobile */}
-          {isMobile && mobileImageSpacerWidth > 0 && (
-            <div
-              style={{
-                width: mobileImageSpacerWidth,
-                height: mobileImageSize,
-                flexShrink: 0,
-              }}
-            />
-          )}
           <span
             style={{
               fontSize: numberSize + 10,
@@ -315,125 +287,117 @@ export function SkillsSection() {
         </div>
       </div>
 
-      {/* Network Visualization */}
-      {useMobileLayout ? (
-        // Mobile: Vertical card stack
-        <MobileSkillsLayout effectiveFrame={effectiveFrame} viewport={viewport} />
-      ) : (
-        // Desktop/Tablet: Radial network centered in viewport
-        <div
-          style={{
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: networkSize,
-            height: networkSize,
-          }}
-        >
-          {/* Profile image acts as center node - rendered by ProfileImageTransition */}
+      {/* Network Visualization - Desktop radial network */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: networkSize,
+          height: networkSize,
+        }}
+      >
+        {/* Profile image acts as center node - rendered by ProfileImageTransition */}
 
-          {/* Category nodes with skills - evenly spaced around center */}
-          {skillCategories.map((category, categoryIndex) => {
-            const categoryPos = getCategoryPosition(
-              categoryIndex,
-              CATEGORY_COUNT,
-              categoryRadiusX,
-              categoryRadiusY
-            );
+        {/* Category nodes with skills - evenly spaced around center */}
+        {skillCategories.map((category, categoryIndex) => {
+          const categoryPos = getCategoryPosition(
+            categoryIndex,
+            CATEGORY_COUNT,
+            categoryRadiusX,
+            categoryRadiusY
+          );
 
-            // Staggered category animation - starts after image arrives at center
-            const categoryDelay = categoryIndex * 10;
-            const categoryFrame = Math.max(0, effectiveFrame - PHASE_2_START - categoryDelay);
-            const categoryProgress = spring({
-              frame: categoryFrame,
-              fps: FPS,
-              config: CATEGORY_SPRING,
-            });
+          // Staggered category animation - starts after image arrives at center
+          const categoryDelay = categoryIndex * 10;
+          const categoryFrame = Math.max(0, effectiveFrame - PHASE_2_START - categoryDelay);
+          const categoryProgress = spring({
+            frame: categoryFrame,
+            fps: FPS,
+            config: CATEGORY_SPRING,
+          });
 
-            // Calculate animated position (from center to final)
-            const animatedX = interpolate(categoryProgress, [0, 1], [0, categoryPos.x]);
-            const animatedY = interpolate(categoryProgress, [0, 1], [0, categoryPos.y]);
+          // Calculate animated position (from center to final)
+          const animatedX = interpolate(categoryProgress, [0, 1], [0, categoryPos.x]);
+          const animatedY = interpolate(categoryProgress, [0, 1], [0, categoryPos.y]);
 
-            // Orbital rotation - uses continuousFrame for smooth continuous rotation
-            // Each category rotates at slightly different speed for visual interest
-            // Rotation starts as soon as category appears (based on categoryProgress)
-            // Very slow rotation: ~0.002 = one full rotation every ~100 seconds at 30fps
-            const rotationSpeed = 0.002 + categoryIndex * 0.0004;
-            const rotationOffset = continuousFrame * rotationSpeed * categoryProgress;
+          // Orbital rotation - uses continuousFrame for smooth continuous rotation
+          // Each category rotates at slightly different speed for visual interest
+          // Rotation starts as soon as category appears (based on categoryProgress)
+          // Very slow rotation: ~0.002 = one full rotation every ~100 seconds at 30fps
+          const rotationSpeed = 0.002 + categoryIndex * 0.0004;
+          const rotationOffset = continuousFrame * rotationSpeed * categoryProgress;
 
-            // Breathing frame - uses continuousFrame, offset per category for varied timing
-            const breatheOffset = categoryIndex * 30;
-            const breatheFrame = continuousFrame + breatheOffset;
+          // Breathing frame - uses continuousFrame, offset per category for varied timing
+          const breatheOffset = categoryIndex * 30;
+          const breatheFrame = continuousFrame + breatheOffset;
 
-            return (
-              <div
-                key={category.id}
-                style={{
-                  position: 'absolute',
-                  left: '50%',
-                  top: '50%',
-                  transform: `translate(calc(-50% + ${animatedX}px), calc(-50% + ${animatedY}px))`,
-                }}
-              >
-                {/* Category label */}
-                <CategoryNode
-                  name={category.name}
-                  progress={categoryProgress}
-                  size={networkSize * (isMobile ? 0.14 : 0.16)}
-                  breatheFrame={breatheFrame}
-                  categoryIndex={categoryIndex}
-                  isMobile={isMobile}
-                />
+          return (
+            <div
+              key={category.id}
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: '50%',
+                transform: `translate(calc(-50% + ${animatedX}px), calc(-50% + ${animatedY}px))`,
+              }}
+            >
+              {/* Category label */}
+              <CategoryNode
+                name={category.name}
+                progress={categoryProgress}
+                size={networkSize * 0.16}
+                breatheFrame={breatheFrame}
+                categoryIndex={categoryIndex}
+              />
 
-                {/* Skills orbiting around category */}
-                {category.skills.map((skill, skillIndex) => {
-                  // Staggered skill appearance animation
-                  const skillDelay = categoryIndex * 12 + skillIndex * 6;
-                  const skillFrame = Math.max(0, effectiveFrame - PHASE_3_START - skillDelay);
-                  const skillProgress = spring({
-                    frame: skillFrame,
-                    fps: FPS,
-                    config: SKILL_SPRING,
-                  });
+              {/* Skills orbiting around category */}
+              {category.skills.map((skill, skillIndex) => {
+                // Staggered skill appearance animation
+                const skillDelay = categoryIndex * 12 + skillIndex * 6;
+                const skillFrame = Math.max(0, effectiveFrame - PHASE_3_START - skillDelay);
+                const skillProgress = spring({
+                  frame: skillFrame,
+                  fps: FPS,
+                  config: SKILL_SPRING,
+                });
 
-                  // Calculate orbital position with continuous rotation
-                  // Skills orbit as soon as they appear (scaled by skillProgress)
-                  const skillPos = getSkillPosition(
-                    skillIndex,
-                    category.skills.length,
-                    skillRadius,
-                    rotationOffset
-                  );
+                // Calculate orbital position with continuous rotation
+                // Skills orbit as soon as they appear (scaled by skillProgress)
+                const skillPos = getSkillPosition(
+                  skillIndex,
+                  category.skills.length,
+                  skillRadius,
+                  rotationOffset
+                );
 
-                  const skillOpacity = interpolate(skillProgress, [0, 1], [0, 1]);
-                  const skillScale = interpolate(skillProgress, [0, 1], [0.5, 1]);
+                const skillOpacity = interpolate(skillProgress, [0, 1], [0, 1]);
+                const skillScale = interpolate(skillProgress, [0, 1], [0.5, 1]);
 
-                  return (
-                    <div
-                      key={skill.name}
-                      style={{
-                        position: 'absolute',
-                        left: '50%',
-                        top: '50%',
-                        transform: `translate(calc(-50% + ${skillPos.x}px), calc(-50% + ${skillPos.y}px)) scale(${skillScale})`,
-                        opacity: skillOpacity,
-                      }}
-                    >
-                      <SkillNode
-                        name={skill.abbr || skill.name}
-                        breatheFrame={breatheFrame}
-                        skillIndex={categoryIndex * 10 + skillIndex}
-                        isMobile={isMobile}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                return (
+                  <div
+                    key={skill.name}
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate(calc(-50% + ${skillPos.x}px), calc(-50% + ${skillPos.y}px)) scale(${skillScale})`,
+                      opacity: skillOpacity,
+                    }}
+                  >
+                    <SkillNode
+                      name={skill.abbr || skill.name}
+                      breatheFrame={breatheFrame}
+                      skillIndex={categoryIndex * 10 + skillIndex}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -489,20 +453,18 @@ function OrbitRing({
   progress,
   breatheFrame,
   categoryIndex,
-  isMobile,
 }: {
   radius: number;
   progress: number;
   breatheFrame: number;
   categoryIndex: number;
-  isMobile: boolean;
 }) {
   const baseOpacity = interpolate(progress, [0, 1], [0, 0.7]);
   const center = radius;
 
-  // Create multiple wavy orbit layers - fewer on mobile for cleaner look
+  // Create multiple wavy orbit layers
   const layers = [];
-  const numLayers = isMobile ? 1 : 3;
+  const numLayers = 3;
 
   // Unique seed values per category for varied but consistent patterns
   const seed1 = (categoryIndex * 1.7 + 0.3) % 1;
@@ -602,14 +564,12 @@ function CategoryNode({
   size,
   breatheFrame,
   categoryIndex,
-  isMobile,
 }: {
   name: string;
   progress: number;
   size: number;
   breatheFrame: number;
   categoryIndex: number;
-  isMobile: boolean;
 }) {
   const opacity = interpolate(progress, [0, 1], [0, 1]);
   const scale = interpolate(progress, [0, 1], [0.8, 1]);
@@ -647,7 +607,6 @@ function CategoryNode({
           progress={progress}
           breatheFrame={breatheFrame}
           categoryIndex={categoryIndex}
-          isMobile={isMobile}
         />
 
         {/* Center dot */}
@@ -662,21 +621,18 @@ function CategoryNode({
           }}
         />
       </div>
-      {/* Hide category name on mobile */}
-      {!isMobile && (
-        <span
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: toRgbString(colors.textPrimary),
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            textAlign: 'center',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {name}
-        </span>
-      )}
+      <span
+        style={{
+          fontSize: 12,
+          fontWeight: 600,
+          color: toRgbString(colors.textPrimary),
+          fontFamily: 'system-ui, -apple-system, sans-serif',
+          textAlign: 'center',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {name}
+      </span>
     </div>
   );
 }
@@ -688,12 +644,10 @@ function SkillNode({
   name,
   breatheFrame,
   skillIndex,
-  isMobile,
 }: {
   name: string;
   breatheFrame: number;
   skillIndex: number;
-  isMobile: boolean;
 }) {
   // Unique phase offset for each skill
   const phaseOffset = skillIndex * 1.3;
@@ -702,12 +656,12 @@ function SkillNode({
   const glowIntensity = 0.15 + Math.sin(breatheFrame * 0.02 + phaseOffset) * 0.1;
   const borderOpacity = 0.4 + Math.sin(breatheFrame * 0.015 + phaseOffset) * 0.2;
 
-  // Responsive sizes
-  const padding = isMobile ? '4px 10px' : '6px 14px';
-  const fontSize = isMobile ? 9 : 11;
-  const dotSize = isMobile ? 3 : 4;
-  const dotLeft = isMobile ? 5 : 6;
-  const textMarginLeft = isMobile ? 6 : 8;
+  // Desktop sizes
+  const padding = '6px 14px';
+  const fontSize = 11;
+  const dotSize = 4;
+  const dotLeft = 6;
+  const textMarginLeft = 8;
 
   return (
     <div
@@ -752,120 +706,6 @@ function SkillNode({
       >
         {name}
       </span>
-    </div>
-  );
-}
-
-/**
- * Mobile layout: Vertical card stack
- */
-function MobileSkillsLayout({
-  effectiveFrame,
-  viewport,
-}: {
-  effectiveFrame: number;
-  viewport: { width: number; height: number };
-}) {
-  const cardGap = 12;
-  const bodySize = responsiveFontSize(viewport.width, 12, 14);
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: cardGap,
-        width: '100%',
-        maxWidth: 400,
-        flex: 1,
-        overflowY: 'auto',
-        paddingBottom: 20,
-      }}
-    >
-      {skillCategories.map((category, categoryIndex) => {
-        // Staggered category animation - starts after image arrives
-        const categoryDelay = categoryIndex * 10;
-        const categoryFrame = Math.max(0, effectiveFrame - PHASE_2_START - categoryDelay);
-        const categoryProgress = spring({
-          frame: categoryFrame,
-          fps: FPS,
-          config: CATEGORY_SPRING,
-        });
-
-        const cardOpacity = interpolate(categoryProgress, [0, 1], [0, 1]);
-        const cardY = interpolate(categoryProgress, [0, 1], [20, 0]);
-
-        return (
-          <div
-            key={category.id}
-            style={{
-              backgroundColor: toRgbaString(colors.cardBackground, 0.5),
-              borderRadius: 12,
-              padding: 16,
-              border: `1px solid ${toRgbaString(colors.cardBorder, 0.4)}`,
-              opacity: cardOpacity,
-              transform: `translateY(${cardY}px)`,
-            }}
-          >
-            {/* Category title */}
-            <h3
-              style={{
-                margin: 0,
-                marginBottom: 12,
-                fontSize: bodySize + 2,
-                fontWeight: 600,
-                color: toRgbString(colors.accent),
-                fontFamily: 'system-ui, -apple-system, sans-serif',
-              }}
-            >
-              {category.name}
-            </h3>
-
-            {/* Skills as tags */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 8,
-              }}
-            >
-              {category.skills.map((skill, skillIndex) => {
-                // Staggered skill animation - after categories
-                const skillDelay = categoryIndex * 8 + skillIndex * 4;
-                const skillFrame = Math.max(0, effectiveFrame - PHASE_3_START - skillDelay);
-                const skillProgress = spring({
-                  frame: skillFrame,
-                  fps: FPS,
-                  config: SKILL_SPRING,
-                });
-
-                const skillOpacity = interpolate(skillProgress, [0, 1], [0, 1]);
-                const skillScale = interpolate(skillProgress, [0, 1], [0.8, 1]);
-
-                return (
-                  <span
-                    key={skill.name}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: 6,
-                      backgroundColor: toRgbaString(colors.background, 0.8),
-                      color: toRgbString(colors.textSecondary),
-                      fontSize: bodySize - 1,
-                      fontWeight: 500,
-                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-                      border: `1px solid ${toRgbaString(colors.cardBorder, 0.3)}`,
-                      opacity: skillOpacity,
-                      transform: `scale(${skillScale})`,
-                    }}
-                  >
-                    {skill.name}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }

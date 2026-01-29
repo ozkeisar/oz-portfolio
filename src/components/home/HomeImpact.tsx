@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react';
 import { motion, useInView } from 'framer-motion';
-import { useViewport, responsiveFontSize, responsiveSpacing } from '../../hooks/useViewport';
-import { colors, toRgbString, toRgbaString } from '../../utils/colors';
+import { useEffect, useRef, useState } from 'react';
 import { featuredMetric, supportingMetrics } from '../../data/impactData';
+import { responsiveFontSize, responsiveSpacing, useViewport } from '../../hooks/useViewport';
+import { colors, toRgbaString, toRgbString } from '../../utils/colors';
 
 // Typewriter text component using Framer Motion
 function TypewriterText({
@@ -94,7 +94,8 @@ function AnimatedCounter({
 
   return (
     <span>
-      {count}{suffix}
+      {count}
+      {suffix}
     </span>
   );
 }
@@ -310,7 +311,11 @@ export function HomeImpact() {
                       fontFamily: 'system-ui, -apple-system, sans-serif',
                     }}
                   >
-                    <TypewriterText text={metric.subLabel} delay={subLabelDelay} isInView={isInView} />
+                    <TypewriterText
+                      text={metric.subLabel}
+                      delay={subLabelDelay}
+                      isInView={isInView}
+                    />
                   </div>
                 )}
               </motion.div>
