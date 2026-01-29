@@ -11,9 +11,10 @@ const HEADER_ICON_SIZE = 40;
 type HomeProfileImageProps = {
   phase: 'entrance' | 'content';
   isAtTop: boolean;
+  visible: boolean;
 };
 
-export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
+export function HomeProfileImage({ phase, isAtTop, visible }: HomeProfileImageProps) {
   const { oPosition } = useHeroOPosition();
   const [safeAreaTop, setSafeAreaTop] = useState(0);
 
@@ -43,8 +44,8 @@ export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
     return () => window.removeEventListener('resize', updateSafeArea);
   }, []);
 
-  // Don't render until we have the O position
-  if (!oPosition) return null;
+  // Don't render until we have the O position and should be visible
+  if (!oPosition || !visible) return null;
 
   // During entrance: position in the O
   // After entrance and at top: position in the O
@@ -87,14 +88,32 @@ export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
+        // GPU acceleration - prevents jitter on first animation
+        willChange: 'transform, width, height, opacity',
+        transform: 'translateZ(0)',
+        backfaceVisibility: 'hidden',
       }}
-      initial={false}
-      animate={{
+      initial={{
+        opacity: 0,
+        scale: 0.8,
+        // Use targetX/targetY to ensure initial matches animate exactly
         left: targetX,
         top: targetY,
         width: targetWidth + borderPadding * 2,
         height: targetHeight + borderPadding * 2,
-        borderRadius: '50%', // 50% makes oval when width ≠ height, circle when equal
+        x: '-50%',
+        y: '-50%',
+        borderRadius: '50%',
+        boxShadow: `0 10px 40px rgba(0, 0, 0, ${shadowOpacity})`,
+      }}
+      animate={{
+        opacity: 1,
+        scale: 1,
+        left: targetX,
+        top: targetY,
+        width: targetWidth + borderPadding * 2,
+        height: targetHeight + borderPadding * 2,
+        borderRadius: '50%',
         x: '-50%',
         y: '-50%',
         boxShadow: `0 10px 40px rgba(0, 0, 0, ${shadowOpacity})`,
@@ -102,8 +121,11 @@ export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
       transition={{
         type: 'spring',
         damping: 18,
-        stiffness: 40, // Slow, smooth spring to match original wrap transition
+        stiffness: 40,
         mass: 1,
+        // Fade in quickly, position animates with normal spring
+        opacity: { duration: 0.3 },
+        scale: { type: 'spring', damping: 14, stiffness: 100 },
       }}
     >
       <motion.img
@@ -111,6 +133,9 @@ export function HomeProfileImage({ phase, isAtTop }: HomeProfileImageProps) {
         alt="Oz Keisar"
         style={{
           objectFit: 'cover',
+          // GPU acceleration for image
+          willChange: 'transform, width, height',
+          backfaceVisibility: 'hidden',
         }}
         initial={false}
         animate={{

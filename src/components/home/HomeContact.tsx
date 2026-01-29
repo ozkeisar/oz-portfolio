@@ -53,12 +53,25 @@ function TypewriterText({
 }
 
 // Contact method data
+const EMAIL_SUBJECT = "Let's Connect - From Your Portfolio";
+const EMAIL_BODY = `Hi Oz,
+
+I came across your portfolio and would love to connect!
+
+[Your message here]
+
+Best regards`;
+
+const WHATSAPP_MESSAGE = `Hi Oz! 👋
+
+I found your portfolio and would love to chat about a potential opportunity.`;
+
 const contactMethods = [
   {
     type: 'email',
     label: 'Email',
     value: 'ozkeisar@gmail.com',
-    href: 'mailto:ozkeisar@gmail.com',
+    href: `mailto:ozkeisar@gmail.com?subject=${encodeURIComponent(EMAIL_SUBJECT)}&body=${encodeURIComponent(EMAIL_BODY)}`,
     icon: EmailIcon,
   },
   {
@@ -72,7 +85,7 @@ const contactMethods = [
     type: 'whatsapp',
     label: 'WhatsApp',
     value: 'Message me',
-    href: 'https://wa.me/972585990055',
+    href: `https://wa.me/972585990055?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`,
     icon: WhatsAppIcon,
   },
   {

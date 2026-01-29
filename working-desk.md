@@ -45,3 +45,16 @@ we will start from scratch the contact section, delete the current component, an
 use the remotion skill for the planing and the animation, write that in the proposal as instruction for every read, to remaind you to read those skill again. 
 
 now create /openspec:proposal contact-section for that change. 
+
+---
+
+so lets do something nice, i want you to combine two concept of sites to one. 
+i want you to copy the /Users/ozkeisar/addit/addit_web project, really analys its components and the structure of animations. 
+then take all the content of the current site avout Oz Keisar (see the site itself and the data its presenting) and combinr the two to new page in the current page as Home page (ozkeisar.dev/home, dont overide the curernt landing page). 
+
+this must be preserve - the landing page of the current site with its entrance aniamtion (the oz keisar aniamation with the image, exam cerfully the alg oof iamge position calcualtion).
+all the rest of the data, recreate in the same animation and scrolling of the /Users/ozkeisar/addit/addit_web site
+
+use the vercal skills for that. 
+
+create new proposal using /opespec:proposal

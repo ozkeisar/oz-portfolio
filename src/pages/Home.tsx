@@ -14,10 +14,12 @@ import '../styles/home.css';
 type AnimationPhase = 'entrance' | 'content';
 
 const ENTRANCE_DURATION_MS = 3700; // ~110 frames at 30fps
+const IMAGE_APPEAR_DELAY_MS = 2500; // Frame 75 at 30fps - syncs with subtitle
 
 export function Home() {
   const [phase, setPhase] = useState<AnimationPhase>('entrance');
   const [isAtTop, setIsAtTop] = useState(true); // Track if user is at top of page
+  const [showImage, setShowImage] = useState(false); // Track when to show profile image
 
   // Lock scroll during entrance
   useEffect(() => {
@@ -40,6 +42,16 @@ export function Home() {
       return () => clearTimeout(timer);
     }
   }, [phase]);
+
+  // Show profile image synced with subtitle appearance
+  useEffect(() => {
+    if (phase === 'entrance' && !showImage) {
+      const timer = setTimeout(() => {
+        setShowImage(true);
+      }, IMAGE_APPEAR_DELAY_MS);
+      return () => clearTimeout(timer);
+    }
+  }, [phase, showImage]);
 
   // Track scroll position for profile image transition
   // Image goes to header on first scroll, returns only when back at top
@@ -85,6 +97,7 @@ export function Home() {
         <HomeProfileImage
           phase={phase}
           isAtTop={isAtTop}
+          visible={showImage}
         />
 
         {/* Main content - visible after entrance */}
